@@ -1,0 +1,1465 @@
+{
+  "days": 365,
+  "plan": [
+    {
+      "day": 1,
+      "readings": []
+    },
+    {
+      "day": 2,
+      "readings": []
+    },
+    {
+      "day": 3,
+      "readings": []
+    },
+    {
+      "day": 4,
+      "readings": []
+    },
+    {
+      "day": 5,
+      "readings": []
+    },
+    {
+      "day": 6,
+      "readings": []
+    },
+    {
+      "day": 7,
+      "readings": []
+    },
+    {
+      "day": 8,
+      "readings": []
+    },
+    {
+      "day": 9,
+      "readings": []
+    },
+    {
+      "day": 10,
+      "readings": []
+    },
+    {
+      "day": 11,
+      "readings": []
+    },
+    {
+      "day": 12,
+      "readings": []
+    },
+    {
+      "day": 13,
+      "readings": []
+    },
+    {
+      "day": 14,
+      "readings": []
+    },
+    {
+      "day": 15,
+      "readings": []
+    },
+    {
+      "day": 16,
+      "readings": []
+    },
+    {
+      "day": 17,
+      "readings": []
+    },
+    {
+      "day": 18,
+      "readings": []
+    },
+    {
+      "day": 19,
+      "readings": []
+    },
+    {
+      "day": 20,
+      "readings": []
+    },
+    {
+      "day": 21,
+      "readings": []
+    },
+    {
+      "day": 22,
+      "readings": []
+    },
+    {
+      "day": 23,
+      "readings": []
+    },
+    {
+      "day": 24,
+      "readings": []
+    },
+    {
+      "day": 25,
+      "readings": []
+    },
+    {
+      "day": 26,
+      "readings": []
+    },
+    {
+      "day": 27,
+      "readings": []
+    },
+    {
+      "day": 28,
+      "readings": []
+    },
+    {
+      "day": 29,
+      "readings": []
+    },
+    {
+      "day": 30,
+      "readings": []
+    },
+    {
+      "day": 31,
+      "readings": []
+    },
+    {
+      "day": 32,
+      "readings": []
+    },
+    {
+      "day": 33,
+      "readings": []
+    },
+    {
+      "day": 34,
+      "readings": []
+    },
+    {
+      "day": 35,
+      "readings": []
+    },
+    {
+      "day": 36,
+      "readings": []
+    },
+    {
+      "day": 37,
+      "readings": []
+    },
+    {
+      "day": 38,
+      "readings": []
+    },
+    {
+      "day": 39,
+      "readings": []
+    },
+    {
+      "day": 40,
+      "readings": []
+    },
+    {
+      "day": 41,
+      "readings": []
+    },
+    {
+      "day": 42,
+      "readings": []
+    },
+    {
+      "day": 43,
+      "readings": []
+    },
+    {
+      "day": 44,
+      "readings": []
+    },
+    {
+      "day": 45,
+      "readings": []
+    },
+    {
+      "day": 46,
+      "readings": []
+    },
+    {
+      "day": 47,
+      "readings": []
+    },
+    {
+      "day": 48,
+      "readings": []
+    },
+    {
+      "day": 49,
+      "readings": []
+    },
+    {
+      "day": 50,
+      "readings": []
+    },
+    {
+      "day": 51,
+      "readings": []
+    },
+    {
+      "day": 52,
+      "readings": []
+    },
+    {
+      "day": 53,
+      "readings": []
+    },
+    {
+      "day": 54,
+      "readings": []
+    },
+    {
+      "day": 55,
+      "readings": []
+    },
+    {
+      "day": 56,
+      "readings": []
+    },
+    {
+      "day": 57,
+      "readings": []
+    },
+    {
+      "day": 58,
+      "readings": []
+    },
+    {
+      "day": 59,
+      "readings": []
+    },
+    {
+      "day": 60,
+      "readings": []
+    },
+    {
+      "day": 61,
+      "readings": []
+    },
+    {
+      "day": 62,
+      "readings": []
+    },
+    {
+      "day": 63,
+      "readings": []
+    },
+    {
+      "day": 64,
+      "readings": []
+    },
+    {
+      "day": 65,
+      "readings": []
+    },
+    {
+      "day": 66,
+      "readings": []
+    },
+    {
+      "day": 67,
+      "readings": []
+    },
+    {
+      "day": 68,
+      "readings": []
+    },
+    {
+      "day": 69,
+      "readings": []
+    },
+    {
+      "day": 70,
+      "readings": []
+    },
+    {
+      "day": 71,
+      "readings": []
+    },
+    {
+      "day": 72,
+      "readings": []
+    },
+    {
+      "day": 73,
+      "readings": []
+    },
+    {
+      "day": 74,
+      "readings": []
+    },
+    {
+      "day": 75,
+      "readings": []
+    },
+    {
+      "day": 76,
+      "readings": []
+    },
+    {
+      "day": 77,
+      "readings": []
+    },
+    {
+      "day": 78,
+      "readings": []
+    },
+    {
+      "day": 79,
+      "readings": []
+    },
+    {
+      "day": 80,
+      "readings": []
+    },
+    {
+      "day": 81,
+      "readings": []
+    },
+    {
+      "day": 82,
+      "readings": []
+    },
+    {
+      "day": 83,
+      "readings": []
+    },
+    {
+      "day": 84,
+      "readings": []
+    },
+    {
+      "day": 85,
+      "readings": []
+    },
+    {
+      "day": 86,
+      "readings": []
+    },
+    {
+      "day": 87,
+      "readings": []
+    },
+    {
+      "day": 88,
+      "readings": []
+    },
+    {
+      "day": 89,
+      "readings": []
+    },
+    {
+      "day": 90,
+      "readings": []
+    },
+    {
+      "day": 91,
+      "readings": []
+    },
+    {
+      "day": 92,
+      "readings": []
+    },
+    {
+      "day": 93,
+      "readings": []
+    },
+    {
+      "day": 94,
+      "readings": []
+    },
+    {
+      "day": 95,
+      "readings": []
+    },
+    {
+      "day": 96,
+      "readings": []
+    },
+    {
+      "day": 97,
+      "readings": []
+    },
+    {
+      "day": 98,
+      "readings": []
+    },
+    {
+      "day": 99,
+      "readings": []
+    },
+    {
+      "day": 100,
+      "readings": []
+    },
+    {
+      "day": 101,
+      "readings": []
+    },
+    {
+      "day": 102,
+      "readings": []
+    },
+    {
+      "day": 103,
+      "readings": []
+    },
+    {
+      "day": 104,
+      "readings": []
+    },
+    {
+      "day": 105,
+      "readings": []
+    },
+    {
+      "day": 106,
+      "readings": []
+    },
+    {
+      "day": 107,
+      "readings": []
+    },
+    {
+      "day": 108,
+      "readings": []
+    },
+    {
+      "day": 109,
+      "readings": []
+    },
+    {
+      "day": 110,
+      "readings": []
+    },
+    {
+      "day": 111,
+      "readings": []
+    },
+    {
+      "day": 112,
+      "readings": []
+    },
+    {
+      "day": 113,
+      "readings": []
+    },
+    {
+      "day": 114,
+      "readings": []
+    },
+    {
+      "day": 115,
+      "readings": []
+    },
+    {
+      "day": 116,
+      "readings": []
+    },
+    {
+      "day": 117,
+      "readings": []
+    },
+    {
+      "day": 118,
+      "readings": []
+    },
+    {
+      "day": 119,
+      "readings": []
+    },
+    {
+      "day": 120,
+      "readings": []
+    },
+    {
+      "day": 121,
+      "readings": []
+    },
+    {
+      "day": 122,
+      "readings": []
+    },
+    {
+      "day": 123,
+      "readings": []
+    },
+    {
+      "day": 124,
+      "readings": []
+    },
+    {
+      "day": 125,
+      "readings": []
+    },
+    {
+      "day": 126,
+      "readings": []
+    },
+    {
+      "day": 127,
+      "readings": []
+    },
+    {
+      "day": 128,
+      "readings": []
+    },
+    {
+      "day": 129,
+      "readings": []
+    },
+    {
+      "day": 130,
+      "readings": []
+    },
+    {
+      "day": 131,
+      "readings": []
+    },
+    {
+      "day": 132,
+      "readings": []
+    },
+    {
+      "day": 133,
+      "readings": []
+    },
+    {
+      "day": 134,
+      "readings": []
+    },
+    {
+      "day": 135,
+      "readings": []
+    },
+    {
+      "day": 136,
+      "readings": []
+    },
+    {
+      "day": 137,
+      "readings": []
+    },
+    {
+      "day": 138,
+      "readings": []
+    },
+    {
+      "day": 139,
+      "readings": []
+    },
+    {
+      "day": 140,
+      "readings": []
+    },
+    {
+      "day": 141,
+      "readings": []
+    },
+    {
+      "day": 142,
+      "readings": []
+    },
+    {
+      "day": 143,
+      "readings": []
+    },
+    {
+      "day": 144,
+      "readings": []
+    },
+    {
+      "day": 145,
+      "readings": []
+    },
+    {
+      "day": 146,
+      "readings": []
+    },
+    {
+      "day": 147,
+      "readings": []
+    },
+    {
+      "day": 148,
+      "readings": []
+    },
+    {
+      "day": 149,
+      "readings": []
+    },
+    {
+      "day": 150,
+      "readings": []
+    },
+    {
+      "day": 151,
+      "readings": []
+    },
+    {
+      "day": 152,
+      "readings": []
+    },
+    {
+      "day": 153,
+      "readings": []
+    },
+    {
+      "day": 154,
+      "readings": []
+    },
+    {
+      "day": 155,
+      "readings": []
+    },
+    {
+      "day": 156,
+      "readings": []
+    },
+    {
+      "day": 157,
+      "readings": []
+    },
+    {
+      "day": 158,
+      "readings": []
+    },
+    {
+      "day": 159,
+      "readings": []
+    },
+    {
+      "day": 160,
+      "readings": []
+    },
+    {
+      "day": 161,
+      "readings": []
+    },
+    {
+      "day": 162,
+      "readings": []
+    },
+    {
+      "day": 163,
+      "readings": []
+    },
+    {
+      "day": 164,
+      "readings": []
+    },
+    {
+      "day": 165,
+      "readings": []
+    },
+    {
+      "day": 166,
+      "readings": []
+    },
+    {
+      "day": 167,
+      "readings": []
+    },
+    {
+      "day": 168,
+      "readings": []
+    },
+    {
+      "day": 169,
+      "readings": []
+    },
+    {
+      "day": 170,
+      "readings": []
+    },
+    {
+      "day": 171,
+      "readings": []
+    },
+    {
+      "day": 172,
+      "readings": []
+    },
+    {
+      "day": 173,
+      "readings": []
+    },
+    {
+      "day": 174,
+      "readings": []
+    },
+    {
+      "day": 175,
+      "readings": []
+    },
+    {
+      "day": 176,
+      "readings": []
+    },
+    {
+      "day": 177,
+      "readings": []
+    },
+    {
+      "day": 178,
+      "readings": []
+    },
+    {
+      "day": 179,
+      "readings": []
+    },
+    {
+      "day": 180,
+      "readings": []
+    },
+    {
+      "day": 181,
+      "readings": []
+    },
+    {
+      "day": 182,
+      "readings": []
+    },
+    {
+      "day": 183,
+      "readings": []
+    },
+    {
+      "day": 184,
+      "readings": []
+    },
+    {
+      "day": 185,
+      "readings": []
+    },
+    {
+      "day": 186,
+      "readings": []
+    },
+    {
+      "day": 187,
+      "readings": []
+    },
+    {
+      "day": 188,
+      "readings": []
+    },
+    {
+      "day": 189,
+      "readings": []
+    },
+    {
+      "day": 190,
+      "readings": []
+    },
+    {
+      "day": 191,
+      "readings": []
+    },
+    {
+      "day": 192,
+      "readings": []
+    },
+    {
+      "day": 193,
+      "readings": []
+    },
+    {
+      "day": 194,
+      "readings": []
+    },
+    {
+      "day": 195,
+      "readings": []
+    },
+    {
+      "day": 196,
+      "readings": []
+    },
+    {
+      "day": 197,
+      "readings": []
+    },
+    {
+      "day": 198,
+      "readings": []
+    },
+    {
+      "day": 199,
+      "readings": []
+    },
+    {
+      "day": 200,
+      "readings": []
+    },
+    {
+      "day": 201,
+      "readings": []
+    },
+    {
+      "day": 202,
+      "readings": []
+    },
+    {
+      "day": 203,
+      "readings": []
+    },
+    {
+      "day": 204,
+      "readings": []
+    },
+    {
+      "day": 205,
+      "readings": []
+    },
+    {
+      "day": 206,
+      "readings": []
+    },
+    {
+      "day": 207,
+      "readings": []
+    },
+    {
+      "day": 208,
+      "readings": []
+    },
+    {
+      "day": 209,
+      "readings": []
+    },
+    {
+      "day": 210,
+      "readings": []
+    },
+    {
+      "day": 211,
+      "readings": []
+    },
+    {
+      "day": 212,
+      "readings": []
+    },
+    {
+      "day": 213,
+      "readings": []
+    },
+    {
+      "day": 214,
+      "readings": []
+    },
+    {
+      "day": 215,
+      "readings": []
+    },
+    {
+      "day": 216,
+      "readings": []
+    },
+    {
+      "day": 217,
+      "readings": []
+    },
+    {
+      "day": 218,
+      "readings": []
+    },
+    {
+      "day": 219,
+      "readings": []
+    },
+    {
+      "day": 220,
+      "readings": []
+    },
+    {
+      "day": 221,
+      "readings": []
+    },
+    {
+      "day": 222,
+      "readings": []
+    },
+    {
+      "day": 223,
+      "readings": []
+    },
+    {
+      "day": 224,
+      "readings": []
+    },
+    {
+      "day": 225,
+      "readings": []
+    },
+    {
+      "day": 226,
+      "readings": []
+    },
+    {
+      "day": 227,
+      "readings": []
+    },
+    {
+      "day": 228,
+      "readings": []
+    },
+    {
+      "day": 229,
+      "readings": []
+    },
+    {
+      "day": 230,
+      "readings": []
+    },
+    {
+      "day": 231,
+      "readings": []
+    },
+    {
+      "day": 232,
+      "readings": []
+    },
+    {
+      "day": 233,
+      "readings": []
+    },
+    {
+      "day": 234,
+      "readings": []
+    },
+    {
+      "day": 235,
+      "readings": []
+    },
+    {
+      "day": 236,
+      "readings": []
+    },
+    {
+      "day": 237,
+      "readings": []
+    },
+    {
+      "day": 238,
+      "readings": []
+    },
+    {
+      "day": 239,
+      "readings": []
+    },
+    {
+      "day": 240,
+      "readings": []
+    },
+    {
+      "day": 241,
+      "readings": []
+    },
+    {
+      "day": 242,
+      "readings": []
+    },
+    {
+      "day": 243,
+      "readings": []
+    },
+    {
+      "day": 244,
+      "readings": []
+    },
+    {
+      "day": 245,
+      "readings": []
+    },
+    {
+      "day": 246,
+      "readings": []
+    },
+    {
+      "day": 247,
+      "readings": []
+    },
+    {
+      "day": 248,
+      "readings": []
+    },
+    {
+      "day": 249,
+      "readings": []
+    },
+    {
+      "day": 250,
+      "readings": []
+    },
+    {
+      "day": 251,
+      "readings": []
+    },
+    {
+      "day": 252,
+      "readings": []
+    },
+    {
+      "day": 253,
+      "readings": []
+    },
+    {
+      "day": 254,
+      "readings": []
+    },
+    {
+      "day": 255,
+      "readings": []
+    },
+    {
+      "day": 256,
+      "readings": []
+    },
+    {
+      "day": 257,
+      "readings": []
+    },
+    {
+      "day": 258,
+      "readings": []
+    },
+    {
+      "day": 259,
+      "readings": []
+    },
+    {
+      "day": 260,
+      "readings": []
+    },
+    {
+      "day": 261,
+      "readings": []
+    },
+    {
+      "day": 262,
+      "readings": []
+    },
+    {
+      "day": 263,
+      "readings": []
+    },
+    {
+      "day": 264,
+      "readings": []
+    },
+    {
+      "day": 265,
+      "readings": []
+    },
+    {
+      "day": 266,
+      "readings": []
+    },
+    {
+      "day": 267,
+      "readings": []
+    },
+    {
+      "day": 268,
+      "readings": []
+    },
+    {
+      "day": 269,
+      "readings": []
+    },
+    {
+      "day": 270,
+      "readings": []
+    },
+    {
+      "day": 271,
+      "readings": []
+    },
+    {
+      "day": 272,
+      "readings": []
+    },
+    {
+      "day": 273,
+      "readings": []
+    },
+    {
+      "day": 274,
+      "readings": []
+    },
+    {
+      "day": 275,
+      "readings": []
+    },
+    {
+      "day": 276,
+      "readings": []
+    },
+    {
+      "day": 277,
+      "readings": []
+    },
+    {
+      "day": 278,
+      "readings": []
+    },
+    {
+      "day": 279,
+      "readings": []
+    },
+    {
+      "day": 280,
+      "readings": []
+    },
+    {
+      "day": 281,
+      "readings": []
+    },
+    {
+      "day": 282,
+      "readings": []
+    },
+    {
+      "day": 283,
+      "readings": []
+    },
+    {
+      "day": 284,
+      "readings": []
+    },
+    {
+      "day": 285,
+      "readings": []
+    },
+    {
+      "day": 286,
+      "readings": []
+    },
+    {
+      "day": 287,
+      "readings": []
+    },
+    {
+      "day": 288,
+      "readings": []
+    },
+    {
+      "day": 289,
+      "readings": []
+    },
+    {
+      "day": 290,
+      "readings": []
+    },
+    {
+      "day": 291,
+      "readings": []
+    },
+    {
+      "day": 292,
+      "readings": []
+    },
+    {
+      "day": 293,
+      "readings": []
+    },
+    {
+      "day": 294,
+      "readings": []
+    },
+    {
+      "day": 295,
+      "readings": []
+    },
+    {
+      "day": 296,
+      "readings": []
+    },
+    {
+      "day": 297,
+      "readings": []
+    },
+    {
+      "day": 298,
+      "readings": []
+    },
+    {
+      "day": 299,
+      "readings": []
+    },
+    {
+      "day": 300,
+      "readings": []
+    },
+    {
+      "day": 301,
+      "readings": []
+    },
+    {
+      "day": 302,
+      "readings": []
+    },
+    {
+      "day": 303,
+      "readings": []
+    },
+    {
+      "day": 304,
+      "readings": []
+    },
+    {
+      "day": 305,
+      "readings": []
+    },
+    {
+      "day": 306,
+      "readings": []
+    },
+    {
+      "day": 307,
+      "readings": []
+    },
+    {
+      "day": 308,
+      "readings": []
+    },
+    {
+      "day": 309,
+      "readings": []
+    },
+    {
+      "day": 310,
+      "readings": []
+    },
+    {
+      "day": 311,
+      "readings": []
+    },
+    {
+      "day": 312,
+      "readings": []
+    },
+    {
+      "day": 313,
+      "readings": []
+    },
+    {
+      "day": 314,
+      "readings": []
+    },
+    {
+      "day": 315,
+      "readings": []
+    },
+    {
+      "day": 316,
+      "readings": []
+    },
+    {
+      "day": 317,
+      "readings": []
+    },
+    {
+      "day": 318,
+      "readings": []
+    },
+    {
+      "day": 319,
+      "readings": []
+    },
+    {
+      "day": 320,
+      "readings": []
+    },
+    {
+      "day": 321,
+      "readings": []
+    },
+    {
+      "day": 322,
+      "readings": []
+    },
+    {
+      "day": 323,
+      "readings": []
+    },
+    {
+      "day": 324,
+      "readings": []
+    },
+    {
+      "day": 325,
+      "readings": []
+    },
+    {
+      "day": 326,
+      "readings": []
+    },
+    {
+      "day": 327,
+      "readings": []
+    },
+    {
+      "day": 328,
+      "readings": []
+    },
+    {
+      "day": 329,
+      "readings": []
+    },
+    {
+      "day": 330,
+      "readings": []
+    },
+    {
+      "day": 331,
+      "readings": []
+    },
+    {
+      "day": 332,
+      "readings": []
+    },
+    {
+      "day": 333,
+      "readings": []
+    },
+    {
+      "day": 334,
+      "readings": []
+    },
+    {
+      "day": 335,
+      "readings": []
+    },
+    {
+      "day": 336,
+      "readings": []
+    },
+    {
+      "day": 337,
+      "readings": []
+    },
+    {
+      "day": 338,
+      "readings": []
+    },
+    {
+      "day": 339,
+      "readings": []
+    },
+    {
+      "day": 340,
+      "readings": []
+    },
+    {
+      "day": 341,
+      "readings": []
+    },
+    {
+      "day": 342,
+      "readings": []
+    },
+    {
+      "day": 343,
+      "readings": []
+    },
+    {
+      "day": 344,
+      "readings": []
+    },
+    {
+      "day": 345,
+      "readings": []
+    },
+    {
+      "day": 346,
+      "readings": []
+    },
+    {
+      "day": 347,
+      "readings": []
+    },
+    {
+      "day": 348,
+      "readings": []
+    },
+    {
+      "day": 349,
+      "readings": []
+    },
+    {
+      "day": 350,
+      "readings": []
+    },
+    {
+      "day": 351,
+      "readings": []
+    },
+    {
+      "day": 352,
+      "readings": []
+    },
+    {
+      "day": 353,
+      "readings": []
+    },
+    {
+      "day": 354,
+      "readings": []
+    },
+    {
+      "day": 355,
+      "readings": []
+    },
+    {
+      "day": 356,
+      "readings": []
+    },
+    {
+      "day": 357,
+      "readings": []
+    },
+    {
+      "day": 358,
+      "readings": []
+    },
+    {
+      "day": 359,
+      "readings": []
+    },
+    {
+      "day": 360,
+      "readings": []
+    },
+    {
+      "day": 361,
+      "readings": []
+    },
+    {
+      "day": 362,
+      "readings": []
+    },
+    {
+      "day": 363,
+      "readings": []
+    },
+    {
+      "day": 364,
+      "readings": []
+    },
+    {
+      "day": 365,
+      "readings": []
+    }
+  ]
+}

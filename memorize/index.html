@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>주평강교회앱</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+
+<body class="bg-gray-100">
+  <div class="max-w-md mx-auto p-4 pb-20 space-y-4">
+    <!-- Header -->
+    <header class="pt-2 flex items-center justify-between">
+      <!-- 홈 버튼 -->
+      <button id="go-home"
+        class="text-sm px-2 py-1 rounded-lg bg-white shadow">
+        🏠 홈
+      </button>
+
+      <div class="text-center flex-1">
+        <h1 class="text-xl font-extrabold">주평강교회</h1>
+        <p class="text-sm text-gray-500">52주 암송</p>
+      </div>
+
+      <!-- 공유 버튼 -->
+      <button id="share-btn"
+        class="text-sm px-2 py-1 rounded-lg bg-white shadow">
+        🔗 공유
+      </button>
+    </header>
+
+
+    <!-- Week Title -->
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-gray-500" id="week-badge"></div>
+      <button id="go-current" class="text-sm px-3 py-1 rounded-full bg-white shadow hover:shadow-md active:scale-[0.98]">
+        📌 이번 주 암송 말씀
+      </button>
+    </div>
+
+    <!-- Main Card -->
+    <section id="main-card"></section>
+
+    <!-- Prev/Next Preview -->
+    <section class="grid grid-cols-2 gap-3">
+      <div id="prev-card"></div>
+      <div id="next-card"></div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-gray-400 pt-2">
+      <span id="progress"></span>
+    </footer>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
