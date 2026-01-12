@@ -1,4 +1,4 @@
-const CACHE_NAME = "jshalom-app-v260112-20";
+const CACHE_NAME = "jshalom-app-v260112-22";
 const CORE = [
   "/",
   "/index.html",
