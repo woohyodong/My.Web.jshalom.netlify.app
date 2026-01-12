@@ -1,4 +1,4 @@
-const CACHE_NAME = "jshalom-app-v260112-27";
+const CACHE_NAME = "jshalom-app-v260112-29";
 const CORE = [
   "/",
   "/index.html",
@@ -14,7 +14,8 @@ const CORE = [
   "/bible-read/",
   "/bible-read/index.html",
   "/bible-read/app.js",
-  "/bible-read/data.json"
+  "/bible-read/data.json",
+  "/data/bible_db.json"
 ];
 
 self.addEventListener("install", (e) => {

@@ -1,13 +1,309 @@
-// bible-read/app.js — 365일 통독
-// data.json(권장): [{ day, date:"MM-DD", month, dayOfMonth, readings:[string...] }, ...]
-// 공유: ?day=123
 (() => {
   const DAY_MIN = 1;
-
   const qs = (sel) => $(sel);
   const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
 
-  // ---------- Storage ----------
+  // ---------- Bible DB ----------
+  const BIBLE_DB_URL = "/data/bible_db.json";
+  let __bibleDbPromise = null;
+  let __bibleIndex = null;
+
+  // ---------- TTS (암송 쪽 방식 이식: Google 우선) ----------
+  const BIBLE_TTS_KEY = "bibleRead:tts:v1";
+
+  const safeJSON = {
+    read(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        return JSON.parse(raw);
+      } catch (_) {
+        return fallback;
+      }
+    },
+    write(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    },
+  };
+
+  const getTTS = () =>
+    safeJSON.read(BIBLE_TTS_KEY, {
+      open: false,
+      ratePreset: "normal", // slow|normal|fast
+      voiceURI: "",         // 사용자 선택 음성 저장
+    });
+
+  const setTTS = (o) => safeJSON.write(BIBLE_TTS_KEY, o);
+
+  const ttsRuntime = { playing: false };
+
+  const stopTTS = () => {
+    ttsRuntime.playing = false;
+    try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (_) {}
+    qs("#bible-tts-mini-status").text("");
+    qs("#bible-tts-panel-status").text("");
+  };
+
+  const sanitizeForTTS = (text) => {
+    if (!text) return "";
+    return String(text)
+      .replace(/[\r\n]+/g, " ")
+      .replace(/[—·•]/g, " ")
+      .replace(/[()［］\[\]{}]/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
+  const getRateByPreset = (preset) => {
+    if (preset === "slow") return 0.95;
+    if (preset === "fast") return 1.05;
+    return 1.0;
+  };
+
+  const getAllVoices = () => {
+    if (!("speechSynthesis" in window)) return [];
+    try { return window.speechSynthesis.getVoices?.() || []; } catch (_) { return []; }
+  };
+
+  const findGoogleKoreanVoice = (voices) => {
+    return (
+      voices.find((v) => /google/i.test(v.name || "") && /^ko/i.test(v.lang || "")) ||
+      voices.find((v) => /google/i.test(v.name || "") && (v.lang || "").toLowerCase() === "ko-kr") ||
+      null
+    );
+  };
+
+  const pickKoreanVoice = (voiceURI) => {
+    const voices = getAllVoices();
+    if (!voices.length) return null;
+
+    if (voiceURI) {
+      const saved = voices.find((v) => v.voiceURI === voiceURI);
+      if (saved) return saved;
+    }
+
+    const googleKo = findGoogleKoreanVoice(voices);
+    if (googleKo) return googleKo;
+
+    return (
+      voices.find((v) => (v.lang || "").toLowerCase() === "ko-kr") ||
+      voices.find((v) => (v.lang || "").toLowerCase().startsWith("ko")) ||
+      null
+    );
+  };
+
+  const ensureDefaultGoogleVoiceSavedIfAvailable = () => {
+    const cfg = getTTS();
+    if (cfg.voiceURI) return;
+
+    const voices = getAllVoices();
+    if (!voices.length) return;
+
+    const googleKo = findGoogleKoreanVoice(voices);
+    if (!googleKo) return;
+
+    setTTS({ ...cfg, voiceURI: googleKo.voiceURI });
+  };
+
+  const speakOnce = (text, cfg) => {
+    if (!("speechSynthesis" in window)) {
+      alert("이 브라우저는 성경듣기(TTS)를 지원하지 않아요.");
+      return null;
+    }
+    window.speechSynthesis.cancel();
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR";
+    u.rate = getRateByPreset(cfg.ratePreset);
+
+    const v = pickKoreanVoice(cfg.voiceURI);
+    if (v) u.voice = v;
+
+    window.speechSynthesis.speak(u);
+    return u;
+  };
+
+  // 다이얼로그 본문을 읽기 좋은 텍스트로 합치기
+  const getModalPlainTextForTTS = () => {
+    const $body = qs("#bible-modal-body");
+    // 절 번호(왼쪽)까지 포함될 수 있으니, 화면 텍스트 기반으로 그냥 읽게 두는 편이 안정적
+    const text = $body.text() || "";
+    return sanitizeForTTS(text);
+  };
+
+  const startBibleTTS = () => {
+    ensureDefaultGoogleVoiceSavedIfAvailable();
+    const cfg = getTTS();
+    const text = getModalPlainTextForTTS();
+
+    if (!text) {
+      alert("읽을 본문이 없어요.");
+      return;
+    }
+
+    ttsRuntime.playing = true;
+    qs("#bible-tts-mini-status").text("재생 중…");
+    qs("#bible-tts-panel-status").text("재생 중…");
+
+    const u = speakOnce(text, cfg);
+    if (!u) {
+      stopTTS();
+      return;
+    }
+
+    u.onend = () => {
+      if (!ttsRuntime.playing) return;
+      ttsRuntime.playing = false;
+      qs("#bible-tts-mini-status").text("");
+      qs("#bible-tts-panel-status").text("");
+    };
+    u.onerror = () => stopTTS();
+  };
+
+  // ---------- Helpers ----------
+  const escapeHTML = (s) =>
+    String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+
+  const escapeAttr = (s) => escapeHTML(s).replaceAll("`", "&#96;");
+
+  const parseReadingToken = (token) => {
+    const t = String(token || "").trim();
+    const m = t.match(/^([가-힣]+)\s*(\d+)(?:\s*-\s*(\d+))?$/);
+    if (!m) return null;
+    const short = m[1];
+    const start = Number(m[2]);
+    const end = m[3] ? Number(m[3]) : start;
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+    return { short, start, end };
+  };
+
+  const buildBibleIndex = (rows) => {
+    const shortToBook = new Map();
+    const bookToLong = new Map();
+    const bcToVerses = new Map(); // "book:chapter" -> [{p,s}]
+    for (const r of rows) {
+      if (!shortToBook.has(r.short_label)) shortToBook.set(r.short_label, r.book);
+      if (!bookToLong.has(r.book)) bookToLong.set(r.book, r.long_label);
+      const key = `${r.book}:${r.chapter}`;
+      if (!bcToVerses.has(key)) bcToVerses.set(key, []);
+      bcToVerses.get(key).push({ p: r.paragraph, s: r.sentence });
+    }
+    return { shortToBook, bookToLong, bcToVerses };
+  };
+
+  const loadBibleDb = async () => {
+    if (__bibleIndex) return __bibleIndex;
+    if (!__bibleDbPromise) {
+      __bibleDbPromise = fetch(BIBLE_DB_URL, { cache: "force-cache" })
+        .then((r) => {
+          if (!r.ok) throw new Error(`bible_db.json 로드 실패 (${r.status})`);
+          return r.json();
+        })
+        .then((json) => {
+          const rows = Array.isArray(json?.Bible) ? json.Bible : [];
+          __bibleIndex = buildBibleIndex(rows);
+          return __bibleIndex;
+        });
+    }
+    return __bibleDbPromise;
+  };
+
+  const renderReadingsHTML = (readings) => {
+    return readings
+      .map((t, i) => {
+        const sep = i < readings.length - 1 ? ` <span class="text-gray-300">·</span> ` : "";
+        return `
+          <button type="button"
+            class="reading-ref inline-flex items-center px-2 py-1 rounded-lg bg-blue-50 text-blue-800 font-semibold hover:bg-blue-100 active:scale-[0.99]"
+            data-ref="${escapeAttr(t)}">
+            ${escapeHTML(t)}
+          </button>${sep}
+        `;
+      })
+      .join("");
+  };
+
+  const openBibleModal = async (token) => {
+    // 모달 열릴 때는 TTS 멈춤(본문 바뀌는 중 재생 방지)
+    stopTTS();
+
+    const parsed = parseReadingToken(token);
+    qs("#bible-modal").removeClass("hidden");
+    qs("#bible-modal-title").text(token || "성경");
+    qs("#bible-modal-subtitle").text("");
+
+    const $body = qs("#bible-modal-body");
+    $body.html(`<div class="text-sm text-gray-500">불러오는 중…</div>`);
+
+    if (!parsed) {
+      qs("#bible-modal-subtitle").text("지원되지 않는 표기");
+      $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(token)}" 표기는 아직 지원하지 않아요.</div>`);
+      return;
+    }
+
+    try {
+      const idx = await loadBibleDb();
+      const bookNum = idx.shortToBook.get(parsed.short);
+      if (!bookNum) {
+        qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
+        $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 bible_db에서 찾지 못했어요.</div>`);
+        return;
+      }
+
+      const longLabel = idx.bookToLong.get(bookNum) || parsed.short;
+      const start = Math.min(parsed.start, parsed.end);
+      const end = Math.max(parsed.start, parsed.end);
+
+      let html = "";
+      for (let ch = start; ch <= end; ch++) {
+        const verses = idx.bcToVerses.get(`${bookNum}:${ch}`) || [];
+        html += `
+          <div class="mb-5">
+            <div class="font-extrabold text-gray-900">${escapeHTML(longLabel)} ${ch}장</div>
+            <div class="mt-2 space-y-2">
+              ${
+                verses.length
+                  ? verses
+                      .map(
+                        (v) => `
+                          <div class="flex gap-2">
+                            <div class="shrink-0 w-7 text-right text-xs text-gray-400 pt-[2px]">${escapeHTML(v.p)}</div>
+                            <div class="text-gray-900">${escapeHTML(v.s)}</div>
+                          </div>
+                        `
+                      )
+                      .join("")
+                  : `<div class="text-sm text-gray-500">본문 데이터가 없어요.</div>`
+              }
+            </div>
+          </div>
+        `;
+      }
+
+      qs("#bible-modal-subtitle").text(`${escapeHTML(longLabel)} ${start}장${start !== end ? `-${end}장` : ""}`);
+      $body.html(html || `<div class="text-sm text-gray-500">표시할 내용이 없어요.</div>`);
+
+      // 본문 로딩 후, voices가 준비되면 Google 디폴트 저장 시도 + 드롭다운 갱신
+      ensureDefaultGoogleVoiceSavedIfAvailable();
+      renderBibleTTSUI();
+    } catch (e) {
+      qs("#bible-modal-subtitle").text("로드 오류");
+      $body.html(`<div class="text-sm text-red-600">본문을 불러오지 못했어요. (오프라인이거나 파일 경로를 확인해 주세요)</div>`);
+      console.error(e);
+    }
+  };
+
+  const closeBibleModal = () => {
+    stopTTS();
+    qs("#bible-modal").addClass("hidden");
+  };
+
+  // ---------- Reading plan / progress ----------
   const STORAGE_KEY = "bibleRead:progress:v2";
   const OPT_KEY = "bibleRead:options:v1";
 
@@ -17,14 +313,8 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
-    } catch (_) {}
-
-    const init = {
-      activeCycle: 1,
-      cycles: { "1": { completed: {}, startedAt: nowIso(), finishedAt: null } }
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(init));
-    return init;
+    } catch {}
+    return { activeCycle: 1, cycles: {} };
   };
 
   const saveProgress = (p) => localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
@@ -40,122 +330,46 @@
   const loadOptions = () => {
     try {
       const raw = localStorage.getItem(OPT_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (_) {}
-    const init = { autoNextAfterDoneToday: false };
-    localStorage.setItem(OPT_KEY, JSON.stringify(init));
-    return init;
+      if (raw) return { autoNextAfterDoneToday: true, ...JSON.parse(raw) };
+    } catch {}
+    return { autoNextAfterDoneToday: true };
   };
 
-  const saveOptions = (o) => localStorage.setItem(OPT_KEY, JSON.stringify(o));
+  const saveOptions = (opt) => localStorage.setItem(OPT_KEY, JSON.stringify(opt));
 
-  // ---------- Query helpers ----------
   const getQueryDay = () => {
-    const params = new URLSearchParams(window.location.search);
-    const d = parseInt(params.get("day"), 10);
-    return Number.isFinite(d) ? d : null;
+    const u = new URL(location.href);
+    const v = u.searchParams.get("day");
+    const n = v == null ? null : Number(v);
+    return Number.isFinite(n) ? n : null;
   };
 
   const setQueryDay = (day) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("day", String(day));
-    window.history.replaceState({}, "", url);
+    const u = new URL(location.href);
+    u.searchParams.set("day", String(day));
+    history.replaceState({}, "", u);
   };
 
-  const buildShareUrl = (day) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("day", String(day));
-    return url.toString();
+  const getTodayMMDD = () => {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${mm}-${dd}`;
   };
 
-  const tryShare = async (day) => {
-    const url = buildShareUrl(day);
-    const title = "주평강교회 · 365일 통독";
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, url });
-        return;
-      }
-    } catch (_) {}
-
-    try {
-      await navigator.clipboard.writeText(url);
-      alert("공유 링크가 복사되었습니다");
-    } catch (_) {
-      prompt("아래 링크를 복사해 공유하세요:", url);
-    }
-  };
-
-  // ---------- Date/Plan helpers ----------
-  const formatKoreanDate = (y, mmdd) => {
-    const [mm, dd] = (mmdd || "").split("-").map((x) => parseInt(x, 10));
-    if (!mm || !dd) return `${y}년`;
-
-    const d = new Date(y, mm - 1, dd);
-    const w = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
-    const m2 = String(mm).padStart(2, "0");
-    const d2 = String(dd).padStart(2, "0");
-    return `${y}.${m2}.${d2} (${w})`;
-  };
-
-  // 오늘 날짜(월/일)로 plan에서 day 찾기 (윤년 2/29는 plan이 없으니 2/28로 처리)
-  const getTodayDayFromPlan = (plan) => {
-    const t = new Date();
-    const m = t.getMonth() + 1;
-    const d = t.getDate();
-
-    if (m === 2 && d === 29) {
-      const feb28 = plan.find((x) => x.month === 2 && x.dayOfMonth === 28);
-      return feb28 ? feb28.day : 59;
-    }
-
-    const hit = plan.find((x) => x.month === m && x.dayOfMonth === d);
-    return hit ? hit.day : 1;
-  };
-
-  // ---------- Data normalize ----------
   const normalizePlan = (raw) => {
-    if (!Array.isArray(raw)) return [];
+    return (raw || []).map((row, i) => {
+      const day = Number(row.day ?? row.Day ?? (i + 1));
+      const date = row.date ?? row.Date ?? row.mmdd ?? row.MMDD ?? "";
+      const readings = row.readings ?? row.Readings ?? row.reading ?? row.Reading ?? [];
+      let month = row.month;
+      let dayOfMonth = row.dayOfMonth;
 
-    const splitTokens = (v) => {
-      return String(v)
-        .replace(/[·]/g, " ")
-        .replace(/[,/]/g, " ")
-        .split(/\s+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    };
-
-    return raw.map((row, idx) => {
-      const day = Number(row?.day) || (idx + 1);
-
-      let readings = [];
-
-      if (Array.isArray(row?.readings)) {
-        readings = row.readings.flatMap((x) => splitTokens(x));
-      } else if (typeof row?.readings === "string") {
-        readings = splitTokens(row.readings);
-      } else if (typeof row?.reading === "string") {
-        readings = splitTokens(row.reading);
-      } else if (typeof row?.content === "string") {
-        readings = splitTokens(row.content);
-      } else if (typeof row?.text === "string") {
-        readings = splitTokens(row.text);
+      if ((!month || !dayOfMonth) && typeof date === "string" && /^\d{2}-\d{2}$/.test(date)) {
+        const [mm, dd] = date.split("-").map(Number);
+        month = mm;
+        dayOfMonth = dd;
       }
-
-      readings = readings.map((s) => String(s).trim()).filter(Boolean);
-
-      let date = row?.date;
-      let month = row?.month;
-      let dayOfMonth = row?.dayOfMonth;
-
-      if (typeof date === "string" && date.includes("-")) {
-        const [mm, dd] = date.split("-").map((x) => parseInt(x, 10));
-        if (!Number.isFinite(month)) month = mm;
-        if (!Number.isFinite(dayOfMonth)) dayOfMonth = dd;
-      }
-
       return { ...row, day, date, month, dayOfMonth, readings };
     });
   };
@@ -170,25 +384,23 @@
     `);
   };
 
-  // ---------- Option logic ----------
-  const findNextUndoneDay = (progress, cycle, startDay, days) => {
-    const c = String(cycle);
-    const doneMap = progress?.cycles?.[c]?.completed || {};
-
-    for (let d = startDay + 1; d <= days; d++) {
-      if (!doneMap[String(d)]) return d;
-    }
-    for (let d = 1; d <= startDay; d++) {
-      if (!doneMap[String(d)]) return d;
-    }
-    return startDay;
+  const getTodayDay = (PLAN) => {
+    const mmdd = getTodayMMDD();
+    const idx = PLAN.findIndex((x) => x.date === mmdd);
+    return idx >= 0 ? idx + 1 : 1;
   };
 
-  // ---------- Render ----------
+  const findNextUndoneDay = (p, cycle, fromDay, days) => {
+    const completed = p.cycles[String(cycle)]?.completed || {};
+    for (let d = fromDay + 1; d <= days; d++) if (!completed[String(d)]) return d;
+    for (let d = 1; d <= days; d++) if (!completed[String(d)]) return d;
+    return clamp(fromDay + 1, 1, days);
+  };
+
   const renderMainCard = (state) => {
     const { PLAN, selectedDay, cycle, days } = state;
-    const entry = PLAN[selectedDay - 1];
 
+    const entry = PLAN[selectedDay - 1];
     const p = loadProgress();
     ensureCycle(p, cycle);
     const done = !!p.cycles[String(cycle)].completed[String(selectedDay)];
@@ -204,7 +416,7 @@
         </div>
 
         <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900">
-          ${hasReadings ? readings.join(" · ") : "(데이터 준비중)"}
+          ${hasReadings ? renderReadingsHTML(readings) : "(데이터 준비중)"}
         </div>
 
         <button id="done-btn"
@@ -213,7 +425,6 @@
           ${done ? "완료됨 ✓ (다시 누르면 해제)" : "읽었어요 :)"}
         </button>
 
-        <!-- 문제가 계속되면 이 줄로 확인 가능 -->
         <div class="mt-3 text-[11px] text-gray-400 break-all hidden">
           day=${selectedDay} · readings=${Array.isArray(readings) ? readings.length : "NA"}
         </div>
@@ -223,101 +434,198 @@
     qs("#done-btn").off("click").on("click", () => {
       const p2 = loadProgress();
       ensureCycle(p2, cycle);
-
-      const key = String(selectedDay);
-      p2.cycles[String(cycle)].completed[key] = !p2.cycles[String(cycle)].completed[key];
+      const cur = !!p2.cycles[String(cycle)].completed[String(selectedDay)];
+      p2.cycles[String(cycle)].completed[String(selectedDay)] = !cur;
 
       if (p2.cycles[String(cycle)].startedAt === null) p2.cycles[String(cycle)].startedAt = nowIso();
+
+      const doneCount = countDone(p2.cycles[String(cycle)].completed);
+      if (doneCount >= days) p2.cycles[String(cycle)].finishedAt = nowIso();
+      else p2.cycles[String(cycle)].finishedAt = null;
+
       saveProgress(p2);
+
+      const opt = loadOptions();
+      const todayDay = state.todayDay;
+      if (opt.autoNextAfterDoneToday && selectedDay === todayDay && !cur) {
+        state.setSelectedDay(findNextUndoneDay(p2, cycle, todayDay, days));
+        return;
+      }
 
       render(state);
     });
   };
 
   const renderHeader = (state) => {
-    const { PLAN, selectedDay, todayDay, cycle, days } = state;
+    const { selectedDay } = state;
 
-    const year = new Date().getFullYear();
-    const entry = PLAN[selectedDay - 1];
-    const badge = entry?.date
-      ? `${year}년 · ${selectedDay}일차 · ${formatKoreanDate(year, entry.date)}`
-      : `${year}년 · ${selectedDay}일차`;
+    qs("#share-btn").off("click").on("click", async () => {
+      const url = new URL(location.href);
+      url.searchParams.set("day", String(selectedDay));
+      const shareData = { title: "주평강교회 · 365일 통독", text: "오늘 분량을 확인해요", url: url.toString() };
+      try {
+        if (navigator.share) await navigator.share(shareData);
+        else {
+          await navigator.clipboard.writeText(url.toString());
+          alert("링크를 복사했어요!");
+        }
+      } catch {}
+    });
 
-    qs("#day-badge").text(badge);
-
-    const p = loadProgress();
-    ensureCycle(p, cycle);
-    const doneCount = countDone(p.cycles[String(cycle)].completed);
-    qs("#progress-count").text(doneCount);
-    qs("#progress-total").text(` / ${days} 완료`);
-
-    qs("#go-home").off("click").on("click", () => window.location.replace("/"));
-    qs("#share-btn").off("click").on("click", () => tryShare(selectedDay));
+    qs("#go-home").off("click").on("click", () => location.assign("/"));
   };
 
+  const initBottomNav = (state) => {
+    qs("#prev-btn").off("click").on("click", () => state.setSelectedDay(state.selectedDay - 1));
+    qs("#next-btn").off("click").on("click", () => state.setSelectedDay(state.selectedDay + 1));
+    qs("#today-btn").off("click").on("click", () => state.setSelectedDay(state.todayDay));
+  };
+
+  const initOptions = () => {
+    const opt = loadOptions();
+    qs("#opt-auto-next").prop("checked", !!opt.autoNextAfterDoneToday);
+    qs("#opt-auto-next").off("change").on("change", (e) => {
+      const next = { ...loadOptions(), autoNextAfterDoneToday: !!e.target.checked };
+      saveOptions(next);
+    });
+  };
+
+  // ---------- Bible TTS UI render/bind ----------
+  const renderBibleTTSUI = () => {
+    const cfg = getTTS();
+
+    // toggle icon/panel
+    qs("#bible-tts-panel").toggleClass("hidden", !cfg.open);
+    qs("#bible-tts-toggle-icon").text(cfg.open ? "▲" : "▼");
+
+    // rate 버튼 active
+    $(".bible-rate-btn").each(function () {
+      const p = $(this).data("rate");
+      $(this)
+        .toggleClass("bg-blue-50 text-blue-700 border-blue-200", cfg.ratePreset === p)
+        .toggleClass("border-gray-200", cfg.ratePreset !== p);
+    });
+
+    // voice select 채우기
+    const voices = getAllVoices();
+    const koVoices = voices.filter((v) => (v.lang || "").toLowerCase().startsWith("ko"));
+
+    const $sel = qs("#bible-tts-voice");
+    if ($sel.length) {
+      const curVal = cfg.voiceURI || "";
+      const opts =
+        `<option value="">자동(가능하면 Google)</option>` +
+        koVoices
+          .map((v) => {
+            const selected = v.voiceURI === curVal ? "selected" : "";
+            return `<option value="${escapeAttr(v.voiceURI)}" ${selected}>${escapeHTML(v.name || "Korean Voice")} (${escapeHTML(v.lang)})</option>`;
+          })
+          .join("");
+      $sel.html(opts);
+    }
+
+    // 상태
+    if (ttsRuntime.playing) {
+      qs("#bible-tts-mini-status").text("재생 중…");
+      qs("#bible-tts-panel-status").text("재생 중…");
+    } else {
+      qs("#bible-tts-mini-status").text("");
+      qs("#bible-tts-panel-status").text("");
+    }
+  };
+
+  const bindBibleTTSEvents = () => {
+    qs("#bible-tts-toggle").off("click").on("click", () => {
+      const cur = getTTS();
+      setTTS({ ...cur, open: !cur.open });
+      renderBibleTTSUI();
+    });
+
+    $(document).off("click.bibleRate").on("click.bibleRate", ".bible-rate-btn", function () {
+      const preset = $(this).data("rate");
+      const cur = getTTS();
+      setTTS({ ...cur, ratePreset: preset });
+      renderBibleTTSUI();
+    });
+
+    qs("#bible-tts-voice").off("change").on("change", function () {
+      const cur = getTTS();
+      setTTS({ ...cur, voiceURI: this.value || "" });
+      // 재생 중이면 사용자가 의도적으로 바꾼 것이므로 즉시 반영(재시작)
+      if (ttsRuntime.playing) {
+        stopTTS();
+        startBibleTTS();
+      }
+      renderBibleTTSUI();
+    });
+
+    qs("#bible-tts-play").off("click").on("click", () => {
+      stopTTS();
+      startBibleTTS();
+      renderBibleTTSUI();
+    });
+
+    qs("#bible-tts-stop").off("click").on("click", () => {
+      stopTTS();
+      renderBibleTTSUI();
+    });
+
+    // 화면 떠나면 정지
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stopTTS();
+    });
+    window.addEventListener("beforeunload", () => stopTTS());
+
+    // 닫기 버튼/배경/ESC
+    $(document).off("click.bibleClose").on("click.bibleClose", "[data-bible-close]", () => closeBibleModal());
+    $(document).off("keydown.bibleEsc").on("keydown.bibleEsc", (ev) => {
+      if (ev.key === "Escape") closeBibleModal();
+    });
+  };
+
+  // ---------- Main render ----------
   const render = (state) => {
     renderHeader(state);
     renderMainCard(state);
   };
 
-  // ---------- Init ----------
-  const initPWA = () => {
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
-  };
-
-  const initCycleSelect = (state) => {
-    const $sel = qs("#cycle-select");
-    $sel.empty();
-    for (let i = 1; i <= 10; i++) $sel.append(`<option value="${i}">${i}독</option>`);
-
-    const p = loadProgress();
-    $sel.val(String(p.activeCycle));
-
-    $sel.off("change").on("change", () => {
-      const next = Number($sel.val());
-      const p2 = loadProgress();
-      ensureCycle(p2, next);
-
-      p2.activeCycle = next;
-      if (p2.cycles[String(next)].startedAt === null) p2.cycles[String(next)].startedAt = nowIso();
-      saveProgress(p2);
-
-      state.cycle = next;
-      render(state);
-    });
-  };
-
-  (async function init() {
+  // ---------- Boot ----------
+  (async () => {
     try {
-      // ✅ base href + 슬래시 보정이 있어도, 가장 안전하게 절대경로로 고정
-      // (여기가 꼬이면 (데이터 준비중) 계속 뜸)
-      const res = await fetch("/bible-read/data.json", { cache: "no-store" });
-
-      if (!res.ok) {
-        renderFatal(`data.json 로딩 실패 (${res.status})`, "https://도메인/bible-read/data.json 이 직접 열리는지 확인하세요.");
-        return;
-      }
-
-      const RAW = await res.json();
+      const RAW = await fetch("./data.json", { cache: "no-cache" }).then((r) => r.json());
       const PLAN = normalizePlan(RAW);
 
       if (!Array.isArray(PLAN) || PLAN.length === 0) {
-        renderFatal("data.json이 배열이 아니거나 비어있습니다.", "data.json 최상단이 [ ... ] 형태인지 확인하세요.");
+        renderFatal("data.json이 비어있거나 형식이 올바르지 않아요.", "bible-read/data.json 내용을 확인해 주세요.");
         return;
       }
 
+      // voices 준비(암송처럼): 준비되면 Google 디폴트 저장 + UI 갱신
+      if ("speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.getVoices();
+          window.speechSynthesis.onvoiceschanged = () => {
+            ensureDefaultGoogleVoiceSavedIfAvailable();
+            renderBibleTTSUI();
+          };
+        } catch (_) {}
+      }
+
       const days = PLAN.length;
-      const todayDay = clamp(getTodayDayFromPlan(PLAN), DAY_MIN, days);
+      const todayDay = getTodayDay(PLAN);
 
-      const queryDay = getQueryDay();
       const p = loadProgress();
-      const opt = loadOptions();
       ensureCycle(p, p.activeCycle);
+      saveProgress(p);
 
-      // 초기 선택 day 결정
-      let initialDay = clamp(queryDay ?? todayDay, DAY_MIN, days);
+      initOptions();
 
-      // ✅ 옵션 ON + 쿼리없음 + 오늘 완료면 → 다음 미완료로 이동
+      let initialDay = todayDay;
+      const queryDay = getQueryDay();
+      if (queryDay != null) initialDay = clamp(queryDay, DAY_MIN, days);
+
+      // 옵션: 오늘 완료 상태면 다음 미완료로 자동 시작
+      const opt = loadOptions();
       if (queryDay == null && opt.autoNextAfterDoneToday) {
         const doneToday = !!p.cycles[String(p.activeCycle)]?.completed?.[String(todayDay)];
         if (doneToday) initialDay = findNextUndoneDay(p, p.activeCycle, todayDay, days);
@@ -333,31 +641,28 @@
           state.selectedDay = clamp(d, DAY_MIN, days);
           setQueryDay(state.selectedDay);
           render(state);
-        }
+        },
       };
 
-      // URL 정규화
-      if (queryDay == null) setQueryDay(state.selectedDay);
+      initBottomNav(state);
+      render(state);
 
-      // nav
-      qs("#prev-btn").off("click").on("click", () => state.setSelectedDay(state.selectedDay - 1));
-      qs("#next-btn").off("click").on("click", () => state.setSelectedDay(state.selectedDay + 1));
-      qs("#today-btn").off("click").on("click", () => state.setSelectedDay(todayDay));
-
-      // 옵션 스위치
-      $("#auto-next-toggle").prop("checked", !!opt.autoNextAfterDoneToday);
-      $("#auto-next-toggle").off("change").on("change", function () {
-        const nextOpt = { ...loadOptions(), autoNextAfterDoneToday: this.checked };
-        saveOptions(nextOpt);
+      // 본문 토큰 클릭 → 모달
+      $(document).off("click.bibleRef").on("click.bibleRef", ".reading-ref", async (e) => {
+        const ref = $(e.currentTarget).data("ref");
+        if (!ref) return;
+        openBibleModal(ref);
       });
 
-      initCycleSelect(state);
-      render(state);
-      initPWA();
+      // TTS UI bind
+      bindBibleTTSEvents();
 
-      // 콘솔 디버그
-      console.log("[bible-read] data.json loaded:", { len: RAW?.length, first: RAW?.[0] });
-      console.log("[bible-read] normalized first:", PLAN[0]);
+      // 초기 1회: Google 음성 있으면 디폴트 저장 시도
+      ensureDefaultGoogleVoiceSavedIfAvailable();
+      renderBibleTTSUI();
+
+      // voices 늦게 로딩 대비
+      setTimeout(() => renderBibleTTSUI(), 300);
     } catch (e) {
       renderFatal("예상치 못한 오류", String(e?.message || e));
       console.error(e);
