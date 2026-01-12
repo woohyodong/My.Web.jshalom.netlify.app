@@ -110,13 +110,10 @@
 
     // ref-only (fixed height)
     qs(targetId).html(`
-      <button class="w-full text-left bg-white rounded-2xl shadow p-4 h-24 flex flex-col justify-between
+      <button class="w-full text-left bg-white rounded-2xl shadow p-3 flex flex-col justify-between
         hover:shadow-md active:scale-[0.99]">
-        <div class="text-xs text-gray-500">${label}</div>
-        <div>
-          <div class="text-sm font-semibold text-gray-900">${week}주</div>
-          <div class="text-xs text-gray-500 mt-1 truncate">${verse.ref}</div>
-        </div>
+        <div class="text-xs text-gray-500">${label} <span class="text-sm font-semibold text-gray-900">(${week}주)</span></div>
+        <div class="text text-gray-500 mt-1 truncate">${verse.ref}</div>
       </button>
     `);
 
