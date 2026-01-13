@@ -473,11 +473,10 @@ const openBibleModal = async (token) => {
   const loadOptions = () => {
     try {
       const raw = localStorage.getItem(OPT_KEY);
-      if (raw) return { autoNextAfterDoneToday: true, ...JSON.parse(raw) };
+      if (raw) return { autoNextAfterDoneToday: false, ...JSON.parse(raw) };
     } catch {}
-    return { autoNextAfterDoneToday: true };
+    return { autoNextAfterDoneToday: false };
   };
-
   const saveOptions = (opt) => localStorage.setItem(OPT_KEY, JSON.stringify(opt));
 
   const getQueryDay = () => {
