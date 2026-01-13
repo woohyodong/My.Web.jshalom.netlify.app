@@ -1,12 +1,13 @@
-const CACHE_NAME = "jshalom-app-v260112-30";
+const CACHE_NAME = "jshalom-app-v260113.17";
 const CORE = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
+  "/favicon.ico",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
-  "/icons/icon-192-maskable.png",
-  "/icons/icon-512-maskable.png",
+  "/icons/favicon-32x32.png",
+  "/icons/apple-touch-icon.png",
   "/memorize/",
   "/memorize/index.html",
   "/memorize/app.js",

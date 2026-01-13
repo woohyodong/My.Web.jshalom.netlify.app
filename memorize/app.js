@@ -288,6 +288,16 @@
   // ======================
   // Render
   // ======================
+  const updateNavButtons = (state) => {
+  const w = state.selectedWeek;
+  // 첫 주면 이전 숨김
+  $q("#prev-btn").toggleClass("invisible pointer-events-none", w <= WEEK_MIN);
+
+  // 마지막 주면 다음 숨김
+  $q("#next-btn").toggleClass("invisible pointer-events-none", w >= WEEK_MAX);
+};
+
+
   const renderHeader = (state) => {
     const { DATA, selectedWeek } = state;
     const doneMap = getDoneMap(DATA.year);
@@ -503,6 +513,8 @@
     renderOptions();
     renderMainCard(state);
     renderTTSArea(state);
+    // ✅ 추가
+    updateNavButtons(state);    
   };
 
   // ======================

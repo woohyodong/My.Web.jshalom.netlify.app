@@ -5,18 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>주평강교회웹앱 · 365일 통독</title>
 
-  <link href="/favicon.ico" rel="shortcut icon" type="image/x-icon" />
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">  
+  <!-- Primary SEO -->
+  <meta name="description" content="주평강교회 성도들을 위한 365일 성경 통독 체크 웹앱. 오늘 분량 확인, 완료 체크, 성경 본문 보기/성경듣기 기능을 제공합니다." />
+  <link rel="canonical" href="https://jshalom.netlify.app/bible-read/" />
 
+  <!-- Icon -->
+  <link href="/favicon.ico?v=2" rel="shortcut icon" type="image/x-icon" />
+  <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+
+  <!-- ✅ /bible-read 경로에서 상대경로 꼬임 방지 -->
   <base href="/bible-read/">
 
+  <!-- PWA -->
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#2563EB">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
   <script>
     (function () {
@@ -28,44 +37,149 @@
 
 <body class="bg-gray-100">
   <div class="max-w-md mx-auto p-4 pb-24 space-y-4">
+    <!-- ✅ Common Header (좌 홈 / 가운데 타이틀 / 우 메뉴) -->
     <header class="pt-2 flex items-start justify-between">
-      <button id="go-home" class="text-sm px-2 py-1 rounded-lg bg-white shadow">🏠 홈</button>
+      <button id="go-home" class="text-sm px-2 py-1 rounded-lg bg-white shadow active:scale-[0.99]">🏠 홈</button>
 
       <div class="text-center flex-1">
-        <h1 class="text-xl font-extrabold">주평강교회</h1>
-        <p class="text-sm text-gray-500">365일 통독</p>
+        <h1 class="text-xl font-extrabold">365일 통독</h1>
       </div>
 
-      <button id="share-btn" class="text-sm px-2 py-1 rounded-lg bg-white shadow">🔗 공유</button>
+      <!-- ✅ 공유/옵션은 메뉴로 숨김 -->
+      <button id="open-sidenav"
+        class="text-sm px-2 py-1 rounded-lg bg-white shadow active:scale-[0.99]"
+        aria-haspopup="dialog" aria-controls="sidenav" aria-expanded="false">
+        ☰ 메뉴
+      </button>
     </header>
 
-    <section class="bg-white rounded-2xl shadow p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="font-extrabold text-gray-900">옵션</div>
-          <div class="text-xs text-gray-500 mt-1">완료 후 자동으로 다음 분량 선택</div>
-        </div>
-
-        <label class="relative inline-flex items-center cursor-pointer select-none">
-          <input id="opt-auto-next" type="checkbox" class="sr-only peer">
-          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600"></div>
-          <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-5"></div>
-        </label>
-      </div>
-    </section>
-
+    <!-- Main Card -->
     <section id="main-card"></section>
 
-    <section class="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+    <!-- 안내 문구(기존 유지) -->
+    <section class="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-2">
       <p class="text-sm text-blue-900 leading-relaxed">
         성경읽기표를 따라 읽으시면
         <span class="font-semibold">구약은 1독</span>,
         <span class="font-semibold">신약과 시편은 2독</span>을 할 수 있습니다.
       </p>
+
+      <ul class="text-sm text-blue-900 leading-relaxed list-disc pl-5">
+        <li>표시된 <span class="font-semibold">성경 구절을 누르면</span> 바로 성경 본문을 볼 수 있어요.</li>
+        <li>
+          본 앱의 성경 본문은
+          <span class="font-semibold">대한성서공회 「개역개정판 성경」</span>을 사용합니다.
+        </li>
+      </ul>
     </section>
+
+
+    <footer class="text-center text-xs text-gray-400 pt-2">
+      <span id="progress"></span>
+    </footer>     
   </div>
 
-  <!-- Bible Modal -->
+  <!-- ✅ SideNav (옵션 + 공유 + (하단) 진도 초기화) -->
+  <div id="sidenav" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div id="sidenav-overlay" class="absolute inset-0 bg-black/40"></div>
+
+    <aside
+      id="sidenav-panel"
+      class="absolute right-0 top-0 h-full w-[86%] max-w-sm bg-white shadow-2xl border-l border-gray-100
+             transform translate-x-full transition-transform duration-200"
+    >
+      <div class="h-full flex flex-col">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-extrabold text-gray-900">메뉴</div>
+            <div class="text-xs text-gray-500 mt-0.5">365일 통독</div>
+          </div>
+          <button id="close-sidenav"
+            class="px-3 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold active:scale-[0.99]">
+            닫기
+          </button>
+        </div>
+
+        <!-- content -->
+        <div class="p-4 space-y-4 flex-1 overflow-auto">
+          <!-- ✅ 옵션 (기존 ID 유지: #opt-auto-next) -->
+          <section class="rounded-2xl border border-gray-200 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold text-gray-900">다음 자동 진행</div>
+                <div class="text-xs text-gray-500 mt-1">오늘 분량 완료 후 자동으로 다음 분량 선택</div>
+              </div>
+
+              <label class="relative inline-flex items-center cursor-pointer select-none">
+                <input id="opt-auto-next" type="checkbox" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition"></div>
+                <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-5"></div>
+              </label>
+            </div>
+          </section>
+
+          <!-- ✅ 공유 (기존 ID 유지: #share-btn) -->
+          <section class="space-y-2">
+            <button id="share-btn"
+              class="w-full rounded-xl bg-blue-600 text-white py-3 font-semibold shadow-sm active:scale-[0.99]">
+              🔗 공유하기
+            </button>
+          </section>
+        </div>
+
+        <!-- ✅ bottom action: reset -->
+        <div class="p-4 border-t border-gray-100">
+          <button id="open-reset"
+            class="w-full rounded-xl bg-red-600 text-white py-3 font-semibold shadow-sm active:scale-[0.99]">
+            🧹 진도 초기화하기
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ✅ Reset Confirm Modal -->
+  <div id="reset-modal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true">
+    <div id="reset-modal-overlay" class="absolute inset-0 bg-black/40"></div>
+
+    <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 mx-auto max-w-md p-4">
+      <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <div class="text-sm font-extrabold text-gray-900">진도 초기화 확인</div>
+          <div class="text-xs text-gray-500 mt-1">
+            실수 방지를 위해 아래 칸에 <span class="font-semibold">아멘</span>을 입력해 주세요.
+          </div>
+        </div>
+
+        <div class="p-4">
+          <input id="reset-input" type="text" inputmode="text" autocomplete="off"
+            placeholder="아멘"
+            class="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm" />
+
+          <div class="mt-2 text-[11px] text-gray-400 leading-relaxed">
+            * 입력한 내용이 정확히 <span class="font-semibold">아멘</span>과 같을 때만 초기화됩니다.
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <button id="reset-cancel"
+              class="rounded-xl border border-gray-200 py-3 font-semibold active:scale-[0.99]">
+              취소
+            </button>
+
+            <button id="reset-confirm" disabled
+              class="rounded-xl bg-red-600 text-white py-3 font-semibold shadow-sm
+                     disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]">
+              초기화
+            </button>
+          </div>
+
+          <div id="reset-status" class="mt-3 text-xs text-gray-500"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bible Modal (기존 유지) -->
   <div id="bible-modal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/40" data-bible-close></div>
 
@@ -83,7 +197,7 @@
           <div class="text-sm text-gray-500">불러오는 중…</div>
         </div>
 
-        <!-- ✅ 성경듣기(TTS) 패널 -->
+        <!-- ✅ 성경듣기(TTS) 패널 (기존 유지) -->
         <div class="px-4 py-3 border-t border-gray-100">
           <button id="bible-tts-toggle"
             class="w-full flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3 active:scale-[0.99]">
@@ -135,6 +249,7 @@
     </div>
   </div>
 
+  <!-- Bottom Nav -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-200">
     <div class="mx-auto max-w-md px-4 py-3 grid grid-cols-3 gap-2">
       <button id="prev-btn" class="rounded-xl border border-gray-200 py-3 font-semibold">←</button>
@@ -143,6 +258,92 @@
     </div>
   </nav>
 
-  <script src="./app.js"></script>
+  <!-- jQuery + SideNav/Reset + app.js -->
+  <script defer src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <script defer>
+    (function () {
+      // --- SideNav open/close ---
+      const navRoot = document.getElementById("sidenav");
+      const panel = document.getElementById("sidenav-panel");
+      const openBtn = document.getElementById("open-sidenav");
+      const closeBtn = document.getElementById("close-sidenav");
+      const overlay = document.getElementById("sidenav-overlay");
+
+      function openNav() {
+        navRoot.classList.remove("hidden");
+        requestAnimationFrame(() => panel.classList.remove("translate-x-full"));
+        openBtn?.setAttribute("aria-expanded", "true");
+        document.body.style.overflow = "hidden";
+      }
+      function closeNav() {
+        panel.classList.add("translate-x-full");
+        openBtn?.setAttribute("aria-expanded", "false");
+        document.body.style.overflow = "";
+        setTimeout(() => navRoot.classList.add("hidden"), 200);
+      }
+
+      openBtn?.addEventListener("click", openNav);
+      closeBtn?.addEventListener("click", closeNav);
+      overlay?.addEventListener("click", closeNav);
+
+      // --- Reset Flow (type '아멘') ---
+      const resetModal = document.getElementById("reset-modal");
+      const resetOverlay = document.getElementById("reset-modal-overlay");
+      const resetOpen = document.getElementById("open-reset");
+      const resetInput = document.getElementById("reset-input");
+      const resetCancel = document.getElementById("reset-cancel");
+      const resetConfirm = document.getElementById("reset-confirm");
+      const resetStatus = document.getElementById("reset-status");
+
+      function openReset() {
+        resetModal.classList.remove("hidden");
+        resetInput.value = "";
+        resetConfirm.disabled = true;
+        resetStatus.textContent = "";
+        setTimeout(() => resetInput.focus(), 50);
+      }
+      function closeReset() {
+        resetModal.classList.add("hidden");
+      }
+
+      resetOpen?.addEventListener("click", () => {
+        closeNav();
+        openReset();
+      });
+
+      resetCancel?.addEventListener("click", closeReset);
+      resetOverlay?.addEventListener("click", closeReset);
+
+      resetInput?.addEventListener("input", () => {
+        const ok = resetInput.value.trim() === "아멘";
+        resetConfirm.disabled = !ok;
+        resetStatus.textContent = ok ? "확인되었습니다. ‘초기화’를 누르면 삭제됩니다." : "";
+      });
+
+      resetConfirm?.addEventListener("click", () => {
+        // ✅ bible-read 저장키만 초기화
+        const keysToRemove = [
+          "bibleRead:progress:v2",
+          "bibleRead:options:v1",
+          "bibleRead:tts:v1", // 원치 않으면 이 줄 삭제
+        ];
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+        resetStatus.textContent = "초기화가 완료되었습니다. 페이지를 새로고침합니다…";
+        setTimeout(() => location.reload(), 600);
+      });
+
+      // ESC 닫기
+      window.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        if (!navRoot.classList.contains("hidden")) closeNav();
+        if (!resetModal.classList.contains("hidden")) closeReset();
+      });
+    })();
+  </script>
+
+  <script defer src="/js/site.js"></script>
+  <script defer src="./app.js"></script>
 </body>
 </html>

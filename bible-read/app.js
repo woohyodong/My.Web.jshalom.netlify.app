@@ -126,7 +126,6 @@
   // 다이얼로그 본문을 읽기 좋은 텍스트로 합치기
   const getModalPlainTextForTTS = () => {
     const $body = qs("#bible-modal-body");
-    // 절 번호(왼쪽)까지 포함될 수 있으니, 화면 텍스트 기반으로 그냥 읽게 두는 편이 안정적
     const text = $body.text() || "";
     return sanitizeForTTS(text);
   };
@@ -229,7 +228,6 @@
   };
 
   const openBibleModal = async (token) => {
-    // 모달 열릴 때는 TTS 멈춤(본문 바뀌는 중 재생 방지)
     stopTTS();
 
     const parsed = parseReadingToken(token);
@@ -288,7 +286,6 @@
       qs("#bible-modal-subtitle").text(`${escapeHTML(longLabel)} ${start}장${start !== end ? `-${end}장` : ""}`);
       $body.html(html || `<div class="text-sm text-gray-500">표시할 내용이 없어요.</div>`);
 
-      // 본문 로딩 후, voices가 준비되면 Google 디폴트 저장 시도 + 드롭다운 갱신
       ensureDefaultGoogleVoiceSavedIfAvailable();
       renderBibleTTSUI();
     } catch (e) {
@@ -456,8 +453,18 @@
     });
   };
 
+  const renderProgress = (state) => {
+    const p = loadProgress();
+    ensureCycle(p, state.cycle);
+    const doneMap = p.cycles[String(state.cycle)]?.completed || {};
+    qs("#progress").text(`진행률: ${countDone(doneMap)}/${state.days}`);
+  };
+
   const renderHeader = (state) => {
     const { selectedDay } = state;
+
+    // ✅ 진도 표시 (ex: 2/365)
+    qs("#day-badge").text(`${selectedDay}/${state.days}`);
 
     qs("#share-btn").off("click").on("click", async () => {
       const url = new URL(location.href);
@@ -476,8 +483,14 @@
   };
 
   const initBottomNav = (state) => {
-    qs("#prev-btn").off("click").on("click", () => state.setSelectedDay(state.selectedDay - 1));
-    qs("#next-btn").off("click").on("click", () => state.setSelectedDay(state.selectedDay + 1));
+    qs("#prev-btn").off("click").on("click", () => {
+      if (state.selectedDay <= DAY_MIN) return;
+      state.setSelectedDay(state.selectedDay - 1);
+    });
+    qs("#next-btn").off("click").on("click", () => {
+      if (state.selectedDay >= state.days) return;
+      state.setSelectedDay(state.selectedDay + 1);
+    });
     qs("#today-btn").off("click").on("click", () => state.setSelectedDay(state.todayDay));
   };
 
@@ -494,11 +507,9 @@
   const renderBibleTTSUI = () => {
     const cfg = getTTS();
 
-    // toggle icon/panel
     qs("#bible-tts-panel").toggleClass("hidden", !cfg.open);
     qs("#bible-tts-toggle-icon").text(cfg.open ? "▲" : "▼");
 
-    // rate 버튼 active
     $(".bible-rate-btn").each(function () {
       const p = $(this).data("rate");
       $(this)
@@ -506,7 +517,6 @@
         .toggleClass("border-gray-200", cfg.ratePreset !== p);
     });
 
-    // voice select 채우기
     const voices = getAllVoices();
     const koVoices = voices.filter((v) => (v.lang || "").toLowerCase().startsWith("ko"));
 
@@ -524,7 +534,6 @@
       $sel.html(opts);
     }
 
-    // 상태
     if (ttsRuntime.playing) {
       qs("#bible-tts-mini-status").text("재생 중…");
       qs("#bible-tts-panel-status").text("재생 중…");
@@ -551,7 +560,6 @@
     qs("#bible-tts-voice").off("change").on("change", function () {
       const cur = getTTS();
       setTTS({ ...cur, voiceURI: this.value || "" });
-      // 재생 중이면 사용자가 의도적으로 바꾼 것이므로 즉시 반영(재시작)
       if (ttsRuntime.playing) {
         stopTTS();
         startBibleTTS();
@@ -570,23 +578,29 @@
       renderBibleTTSUI();
     });
 
-    // 화면 떠나면 정지
-    document.addEventListener("visibilitychange", () => {
+    $(document).off("visibilitychange.bibleTTS").on("visibilitychange.bibleTTS", () => {
       if (document.hidden) stopTTS();
     });
-    window.addEventListener("beforeunload", () => stopTTS());
+    $(window).off("beforeunload.bibleTTS").on("beforeunload.bibleTTS", () => stopTTS());
 
-    // 닫기 버튼/배경/ESC
     $(document).off("click.bibleClose").on("click.bibleClose", "[data-bible-close]", () => closeBibleModal());
     $(document).off("keydown.bibleEsc").on("keydown.bibleEsc", (ev) => {
       if (ev.key === "Escape") closeBibleModal();
     });
   };
 
+  const updateNavButtons = (state) => {
+    qs("#prev-btn").toggleClass("invisible pointer-events-none", state.selectedDay <= DAY_MIN);
+    qs("#next-btn").toggleClass("invisible pointer-events-none", state.selectedDay >= state.days);
+  };
+
   // ---------- Main render ----------
   const render = (state) => {
     renderHeader(state);
     renderMainCard(state);
+    updateNavButtons(state);
+    // ✅ 추가
+    renderProgress(state);    
   };
 
   // ---------- Boot ----------
@@ -600,7 +614,6 @@
         return;
       }
 
-      // voices 준비(암송처럼): 준비되면 Google 디폴트 저장 + UI 갱신
       if ("speechSynthesis" in window) {
         try {
           window.speechSynthesis.getVoices();
@@ -624,7 +637,6 @@
       const queryDay = getQueryDay();
       if (queryDay != null) initialDay = clamp(queryDay, DAY_MIN, days);
 
-      // 옵션: 오늘 완료 상태면 다음 미완료로 자동 시작
       const opt = loadOptions();
       if (queryDay == null && opt.autoNextAfterDoneToday) {
         const doneToday = !!p.cycles[String(p.activeCycle)]?.completed?.[String(todayDay)];
@@ -647,21 +659,16 @@
       initBottomNav(state);
       render(state);
 
-      // 본문 토큰 클릭 → 모달
       $(document).off("click.bibleRef").on("click.bibleRef", ".reading-ref", async (e) => {
         const ref = $(e.currentTarget).data("ref");
         if (!ref) return;
         openBibleModal(ref);
       });
 
-      // TTS UI bind
       bindBibleTTSEvents();
 
-      // 초기 1회: Google 음성 있으면 디폴트 저장 시도
       ensureDefaultGoogleVoiceSavedIfAvailable();
       renderBibleTTSUI();
-
-      // voices 늦게 로딩 대비
       setTimeout(() => renderBibleTTSUI(), 300);
     } catch (e) {
       renderFatal("예상치 못한 오류", String(e?.message || e));
