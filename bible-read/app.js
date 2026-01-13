@@ -56,6 +56,30 @@
     qs("#bible-tts-panel-status").text("");
   };
 
+  // ---------- Confetti helpers (site.js 래퍼가 없어도 동작) ----------
+  const prefersReducedMotion = () =>
+    typeof matchMedia === "function" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const fxSmall = () => {
+    if (prefersReducedMotion()) return;
+    if (window.SiteFX?.burstSmall) return window.SiteFX.burstSmall();
+    if (typeof window.confetti === "function") {
+      try { window.confetti({ particleCount: 60, spread: 70, startVelocity: 35, origin: { y: 0.75 } }); } catch (_) {}
+    }
+  };
+
+  const fxBig = () => {
+    if (prefersReducedMotion()) return;
+    if (window.SiteFX?.burstBig) return window.SiteFX.burstBig();
+    if (typeof window.confetti === "function") {
+      try {
+        window.confetti({ particleCount: 160, spread: 110, startVelocity: 55, origin: { y: 0.65 } });
+        setTimeout(() => window.confetti({ particleCount: 120, spread: 90, startVelocity: 45, origin: { y: 0.65 } }), 180);
+      } catch (_) {}
+    }
+  };
+
   const sanitizeForTTS = (text) => {
     if (!text) return "";
     return String(text)
@@ -249,62 +273,62 @@
 
   const escapeAttr = (s) => escapeHTML(s).replaceAll("`", "&#96;");
 
-// ✅ (교체) "에9,10" / "눅1:1-38" / "시119:1-24" / "창9-10" 지원
-const parseReadingToken = (token) => {
-  const raw = String(token || "").trim();
-  if (!raw) return null;
+  // ✅ "에9,10" / "눅1:1-38" / "시119:1-24" / "창9-10" 지원
+  const parseReadingToken = (token) => {
+    const raw = String(token || "").trim();
+    if (!raw) return null;
 
-  // 1) 책 약어 + 나머지
-  const m = raw.match(/^([가-힣]+)\s*(.+)$/);
-  if (!m) return null;
+    // 1) 책 약어 + 나머지
+    const m = raw.match(/^([가-힣]+)\s*(.+)$/);
+    if (!m) return null;
 
-  const short = m[1].trim();
-  const rest = m[2].trim();
-  if (!rest) return null;
+    const short = m[1].trim();
+    const rest = m[2].trim();
+    if (!rest) return null;
 
-  // 2) 쉼표로 여러 구간 분리 (에9,10 / 시52,53,54)
-  const segs = rest.split(/\s*,\s*/).filter(Boolean);
-  if (!segs.length) return null;
+    // 2) 쉼표로 여러 구간 분리 (에9,10 / 시52,53,54)
+    const segs = rest.split(/\s*,\s*/).filter(Boolean);
+    if (!segs.length) return null;
 
-  const parts = [];
+    const parts = [];
 
-  for (const seg of segs) {
-    // seg 예: "1", "9-10", "1:1-38", "119:1-24"
-    // (A) 절 포함: ch:vStart-vEnd
-    if (seg.includes(":")) {
-      const mm = seg.match(/^(\d+)\s*:\s*(\d+)(?:\s*-\s*(\d+))?$/);
+    for (const seg of segs) {
+      // seg 예: "1", "9-10", "1:1-38", "119:1-24"
+
+      // (A) 절 포함: ch:vStart-vEnd
+      if (seg.includes(":")) {
+        const mm = seg.match(/^(\d+)\s*:\s*(\d+)(?:\s*-\s*(\d+))?$/);
+        if (!mm) return null;
+        const ch = Number(mm[1]);
+        const vStart = Number(mm[2]);
+        const vEnd = mm[3] ? Number(mm[3]) : vStart;
+        if (![ch, vStart, vEnd].every(Number.isFinite)) return null;
+        parts.push({
+          chStart: ch,
+          chEnd: ch,
+          vStart: Math.min(vStart, vEnd),
+          vEnd: Math.max(vStart, vEnd),
+        });
+        continue;
+      }
+
+      // (B) 장만: chStart-chEnd
+      const mm = seg.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
       if (!mm) return null;
-      const ch = Number(mm[1]);
-      const vStart = Number(mm[2]);
-      const vEnd = mm[3] ? Number(mm[3]) : vStart;
-      if (![ch, vStart, vEnd].every(Number.isFinite)) return null;
+      const chStart = Number(mm[1]);
+      const chEnd = mm[2] ? Number(mm[2]) : chStart;
+      if (![chStart, chEnd].every(Number.isFinite)) return null;
       parts.push({
-        chStart: ch,
-        chEnd: ch,
-        vStart: Math.min(vStart, vEnd),
-        vEnd: Math.max(vStart, vEnd),
+        chStart: Math.min(chStart, chEnd),
+        chEnd: Math.max(chStart, chEnd),
       });
-      continue;
     }
 
-    // (B) 장만: chStart-chEnd
-    const mm = seg.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
-    if (!mm) return null;
-    const chStart = Number(mm[1]);
-    const chEnd = mm[2] ? Number(mm[2]) : chStart;
-    if (![chStart, chEnd].every(Number.isFinite)) return null;
-    parts.push({
-      chStart: Math.min(chStart, chEnd),
-      chEnd: Math.max(chStart, chEnd),
-    });
-  }
+    // 정렬(표기 안정화)
+    parts.sort((a, b) => (a.chStart - b.chStart) || ((a.vStart ?? 0) - (b.vStart ?? 0)));
 
-  // 정렬(표기 안정화)
-  parts.sort((a, b) => (a.chStart - b.chStart) || ((a.vStart ?? 0) - (b.vStart ?? 0)));
-
-  return { short, parts };
-};
-
+    return { short, parts };
+  };
 
   const buildBibleIndex = (rows) => {
     const shortToBook = new Map();
@@ -352,93 +376,92 @@ const parseReadingToken = (token) => {
       .join("");
   };
 
-const openBibleModal = async (token) => {
-  stopTTS();
+  const openBibleModal = async (token) => {
+    stopTTS();
 
-  const parsed = parseReadingToken(token);
-  qs("#bible-modal").removeClass("hidden");
-  qs("#bible-modal-title").text(token || "성경");
-  qs("#bible-modal-subtitle").text("");
-  
-  window.SiteOverlay?.open("bible-modal", closeBibleModal);
+    const parsed = parseReadingToken(token);
+    qs("#bible-modal").removeClass("hidden");
+    qs("#bible-modal-title").text(token || "성경");
+    qs("#bible-modal-subtitle").text("");
 
-  const $body = qs("#bible-modal-body");
-  $body.html(`<div class="text-sm text-gray-500">불러오는 중…</div>`);
+    window.SiteOverlay?.open("bible-modal", closeBibleModal);
 
-  if (!parsed) {
-    qs("#bible-modal-subtitle").text("지원되지 않는 표기");
-    $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(token)}" 표기는 아직 지원하지 않아요.</div>`);
-    return;
-  }
+    const $body = qs("#bible-modal-body");
+    $body.html(`<div class="text-sm text-gray-500">불러오는 중…</div>`);
 
-  try {
-    const idx = await loadBibleDb();
-    const bookNum = idx.shortToBook.get(parsed.short);
-    if (!bookNum) {
-      qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
-      $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 성경DB에서 찾지 못했어요.</div>`);
+    if (!parsed) {
+      qs("#bible-modal-subtitle").text("지원되지 않는 표기");
+      $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(token)}" 표기는 아직 지원하지 않아요.</div>`);
       return;
     }
 
-    const longLabel = idx.bookToLong.get(bookNum) || parsed.short;
-
-    // ✅ subtitle용 표기 정리
-    const labelParts = parsed.parts.map((p) => {
-      const ch = p.chStart === p.chEnd ? `${p.chStart}` : `${p.chStart}-${p.chEnd}`;
-      if (p.vStart != null) return `${p.chStart}:${p.vStart}-${p.vEnd}`;
-      return ch;
-    });
-    qs("#bible-modal-subtitle").text(`${escapeHTML(longLabel)} ${escapeHTML(labelParts.join(", "))}`);
-
-    let html = "";
-
-    for (const part of parsed.parts) {
-      for (let ch = part.chStart; ch <= part.chEnd; ch++) {
-        let verses = idx.bcToVerses.get(`${bookNum}:${ch}`) || [];
-
-        // ✅ 절 범위가 있으면 paragraph(=절) 기준으로 필터링
-        if (part.vStart != null && part.chStart === part.chEnd) {
-          verses = verses.filter((v) => {
-            const n = Number(v.p);
-            return Number.isFinite(n) && n >= part.vStart && n <= part.vEnd;
-          });
-        }
-
-        html += `
-          <div class="mb-5">
-            <div class="font-extrabold text-gray-900">${escapeHTML(longLabel)} ${ch}장</div>
-            <div class="mt-2 space-y-2">
-              ${
-                verses.length
-                  ? verses
-                      .map(
-                        (v) => `
-                          <div class="flex gap-2">
-                            <div class="shrink-0 w-7 text-right text-xs text-gray-400 pt-[2px]">${escapeHTML(v.p)}</div>
-                            <div class="text-gray-900">${escapeHTML(v.s)}</div>
-                          </div>
-                        `
-                      )
-                      .join("")
-                  : `<div class="text-sm text-gray-500">본문 데이터가 없어요.</div>`
-              }
-            </div>
-          </div>
-        `;
+    try {
+      const idx = await loadBibleDb();
+      const bookNum = idx.shortToBook.get(parsed.short);
+      if (!bookNum) {
+        qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
+        $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 성경DB에서 찾지 못했어요.</div>`);
+        return;
       }
+
+      const longLabel = idx.bookToLong.get(bookNum) || parsed.short;
+
+      // ✅ subtitle용 표기 정리
+      const labelParts = parsed.parts.map((p) => {
+        const ch = p.chStart === p.chEnd ? `${p.chStart}` : `${p.chStart}-${p.chEnd}`;
+        if (p.vStart != null) return `${p.chStart}:${p.vStart}-${p.vEnd}`;
+        return ch;
+      });
+      qs("#bible-modal-subtitle").text(`${escapeHTML(longLabel)} ${escapeHTML(labelParts.join(", "))}`);
+
+      let html = "";
+
+      for (const part of parsed.parts) {
+        for (let ch = part.chStart; ch <= part.chEnd; ch++) {
+          let verses = idx.bcToVerses.get(`${bookNum}:${ch}`) || [];
+
+          // ✅ 절 범위가 있으면 paragraph(=절) 기준으로 필터링
+          if (part.vStart != null && part.chStart === part.chEnd) {
+            verses = verses.filter((v) => {
+              const n = Number(v.p);
+              return Number.isFinite(n) && n >= part.vStart && n <= part.vEnd;
+            });
+          }
+
+          html += `
+            <div class="mb-5">
+              <div class="font-extrabold text-gray-900">${escapeHTML(longLabel)} ${ch}장</div>
+              <div class="mt-2 space-y-2">
+                ${
+                  verses.length
+                    ? verses
+                        .map(
+                          (v) => `
+                            <div class="flex gap-2">
+                              <div class="shrink-0 w-7 text-right text-xs text-gray-400 pt-[2px]">${escapeHTML(v.p)}</div>
+                              <div class="text-gray-900">${escapeHTML(v.s)}</div>
+                            </div>
+                          `
+                        )
+                        .join("")
+                    : `<div class="text-sm text-gray-500">본문 데이터가 없어요.</div>`
+                }
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      $body.html(html || `<div class="text-sm text-gray-500">표시할 내용이 없어요.</div>`);
+
+      ensureDefaultGoogleVoiceSavedIfAvailable();
+      renderBibleTTSUI();
+    } catch (e) {
+      qs("#bible-modal-subtitle").text("로드 오류");
+      $body.html(`<div class="text-sm text-red-600">본문을 불러오지 못했어요. (오프라인이거나 파일 경로를 확인해 주세요)</div>`);
+      console.error(e);
     }
-
-    $body.html(html || `<div class="text-sm text-gray-500">표시할 내용이 없어요.</div>`);
-
-    ensureDefaultGoogleVoiceSavedIfAvailable();
-    renderBibleTTSUI();
-  } catch (e) {
-    qs("#bible-modal-subtitle").text("로드 오류");
-    $body.html(`<div class="text-sm text-red-600">본문을 불러오지 못했어요. (오프라인이거나 파일 경로를 확인해 주세요)</div>`);
-    console.error(e);
-  }
-};
-
+  };
 
   const closeBibleModal = () => {
     stopTTS();
@@ -539,6 +562,39 @@ const openBibleModal = async (token) => {
     return clamp(fromDay + 1, 1, days);
   };
 
+  const isCycleFinished = (p, cycle, days) => {
+    ensureCycle(p, cycle);
+    const doneCount = countDone(p.cycles[String(cycle)]?.completed);
+    return doneCount >= days;
+  };
+
+  // ✅ A안: 완독이면 자동으로 다음 독으로 넘기기 (옵션 무관)
+  const advanceCycleIfFinished = (p, cycle, days) => {
+    ensureCycle(p, cycle);
+    const k = String(cycle);
+
+    // finishedAt 보정
+    const doneCount = countDone(p.cycles[k]?.completed);
+    if (doneCount >= days && !p.cycles[k].finishedAt) p.cycles[k].finishedAt = nowIso();
+    if (doneCount < days) p.cycles[k].finishedAt = null;
+
+    if (doneCount < days) return cycle;
+
+    const next = Number(p.activeCycle || cycle) + 1;
+    p.activeCycle = next;
+    ensureCycle(p, next);
+    saveProgress(p);
+    return next;
+  };
+
+  // ✅ A안: "사용자가 봐야할 day" 자동 선택
+  const pickAutoDay = (p, cycle, todayDay, days) => {
+    ensureCycle(p, cycle);
+    const doneToday = !!p.cycles[String(cycle)]?.completed?.[String(todayDay)];
+    if (!doneToday) return todayDay;
+    return findNextUndoneDay(p, cycle, todayDay, days);
+  };
+
   const renderMainCard = (state) => {
     const { PLAN, selectedDay, cycle, days } = state;
 
@@ -576,8 +632,12 @@ const openBibleModal = async (token) => {
     qs("#done-btn").off("click").on("click", () => {
       const p2 = loadProgress();
       ensureCycle(p2, cycle);
-      const cur = !!p2.cycles[String(cycle)].completed[String(selectedDay)];
-      p2.cycles[String(cycle)].completed[String(selectedDay)] = !cur;
+
+      const wasDone = !!p2.cycles[String(cycle)].completed[String(selectedDay)];
+      const nowDone = !wasDone;
+
+      // toggle
+      p2.cycles[String(cycle)].completed[String(selectedDay)] = nowDone;
 
       if (p2.cycles[String(cycle)].startedAt === null) p2.cycles[String(cycle)].startedAt = nowIso();
 
@@ -587,10 +647,29 @@ const openBibleModal = async (token) => {
 
       saveProgress(p2);
 
+      // ✅ 체크 ON 축하(작게)
+      //if (nowDone) fxSmall();
+      if (nowDone && doneCount % 7 === 0) fxSmall();
+
+      // ✅ A안: 완독이면 즉시 다음 독으로 자동 전환(큰 축하)
+      if (nowDone && doneCount >= days) {
+        fxBig();
+
+        const nextCycle = advanceCycleIfFinished(p2, cycle, days);
+        state.cycle = nextCycle;
+
+        const p3 = loadProgress();
+        ensureCycle(p3, state.cycle);
+
+        const nextDay = pickAutoDay(p3, state.cycle, state.todayDay, days);
+        state.setSelectedDay(nextDay);
+        return;
+      }
+
+      // (옵션 유지) 오늘 완료 후 다음 자동 진행
       const opt = loadOptions();
-      const todayDay = state.todayDay;
-      if (opt.autoNextAfterDoneToday && selectedDay === todayDay && !cur) {
-        state.setSelectedDay(findNextUndoneDay(p2, cycle, todayDay, days));
+      if (opt.autoNextAfterDoneToday && selectedDay === state.todayDay && nowDone) {
+        state.setSelectedDay(findNextUndoneDay(p2, cycle, state.todayDay, days));
         return;
       }
 
@@ -602,7 +681,9 @@ const openBibleModal = async (token) => {
     const p = loadProgress();
     ensureCycle(p, state.cycle);
     const doneMap = p.cycles[String(state.cycle)]?.completed || {};
-    qs("#progress").text(`진행률: ${countDone(doneMap)}/${state.days}`);
+    const doneCount = countDone(doneMap);
+    const pct = Math.floor((doneCount / state.days) * 100);
+    qs("#progress").text(`진행률: ${state.cycle}독 · ${doneCount}/${state.days} (${pct}%)`);
   };
 
   const renderHeader = (state) => {
@@ -729,14 +810,11 @@ const openBibleModal = async (token) => {
       if (document.hidden) stopTTS();
     });
 
-    // beforeunload: 데스크탑 중심
     $(window).off("beforeunload.bibleTTS").on("beforeunload.bibleTTS", () => stopTTS());
 
-    // ✅ pagehide: iOS/Safari/모바일에서 "뒤로가기/홈화면/탭전환" 때 더 잘 잡힘
     window.removeEventListener("pagehide", stopTTS, true);
     window.addEventListener("pagehide", stopTTS, true);
 
-    // ✅ history.back / 브라우저 뒤로가기(히스토리 이동) 시도 포함
     window.removeEventListener("popstate", stopTTS, true);
     window.addEventListener("popstate", stopTTS, true);
 
@@ -785,26 +863,44 @@ const openBibleModal = async (token) => {
 
       const p = loadProgress();
       ensureCycle(p, p.activeCycle);
-      saveProgress(p);
+
+      // ✅ A안: 이미 완독 상태로 들어오면 자동으로 다음 독으로 넘김
+      if (isCycleFinished(p, p.activeCycle, days)) {
+        p.activeCycle = advanceCycleIfFinished(p, p.activeCycle, days);
+      } else {
+        saveProgress(p);
+      }
 
       initOptions();
 
-      let initialDay = todayDay;
       const queryDay = getQueryDay();
-      if (queryDay != null) initialDay = clamp(queryDay, DAY_MIN, days);
-
       const opt = loadOptions();
-      if (queryDay == null && opt.autoNextAfterDoneToday) {
-        const doneToday = !!p.cycles[String(p.activeCycle)]?.completed?.[String(todayDay)];
-        if (doneToday) initialDay = findNextUndoneDay(p, p.activeCycle, todayDay, days);
+
+      // ✅ 초기 day 선택 (A안: 기본은 "오늘(미완료)" -> "가까운 미완료")
+      let initialDay;
+      if (queryDay != null) {
+        initialDay = clamp(queryDay, DAY_MIN, days);
+      } else {
+        const p2 = loadProgress();
+        const cycle = Number(p2.activeCycle || 1);
+        ensureCycle(p2, cycle);
+
+        initialDay = pickAutoDay(p2, cycle, todayDay, days);
+
+        // (옵션 유지) 오늘 완료 후 다음 자동 진행이 켜져있다면, 오늘이 완료인 경우 next로
+        if (opt.autoNextAfterDoneToday) {
+          const doneToday = !!p2.cycles[String(cycle)]?.completed?.[String(todayDay)];
+          if (doneToday) initialDay = findNextUndoneDay(p2, cycle, todayDay, days);
+        }
       }
 
+      const pFinal = loadProgress();
       const state = {
         PLAN,
         days,
         todayDay,
         selectedDay: initialDay,
-        cycle: p.activeCycle,
+        cycle: Number(pFinal.activeCycle || 1),
         setSelectedDay: (d) => {
           state.selectedDay = clamp(d, DAY_MIN, days);
           setQueryDay(state.selectedDay);
@@ -818,7 +914,7 @@ const openBibleModal = async (token) => {
       $(document).off("click.bibleRef").on("click.bibleRef", ".reading-ref", async (e) => {
         const ref = $(e.currentTarget).data("ref");
         if (!ref) return;
-        openBibleModal(ref);        
+        openBibleModal(ref);
       });
 
       bindBibleTTSEvents();

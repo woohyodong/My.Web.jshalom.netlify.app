@@ -1,4 +1,4 @@
-const CACHE_NAME = "jshalom-app-v260113.44";
+const CACHE_NAME = "jshalom-app-v260113.49";
 const CORE = [
   "/",
   "/index.html",
@@ -16,6 +16,8 @@ const CORE = [
   "/bible-read/index.html",
   "/bible-read/app.js",
   "/bible-read/data.json",
+  "/js/confetti.browser.min.js",
+  "/js/site.js",
   "/data/bible_db.json"
 ];
 

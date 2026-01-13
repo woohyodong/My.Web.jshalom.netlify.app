@@ -352,10 +352,23 @@
 
     $q("#done-btn").off("click").on("click", () => {
       stopTTS();
-      const next = { ...doneMap, [String(selectedWeek)]: !done };
+
+      const beforeCount = countDone(doneMap);
+      const nowDone = !done; // 이번 클릭으로 "완료"가 되는지
+      const next = { ...doneMap, [String(selectedWeek)]: nowDone };
+      const afterCount = countDone(next);
+
       setDoneMap(DATA.year, next);
+
+      // ✅ 완료 체크 ON일 때만 폭죽
+      if (nowDone && afterCount > beforeCount) {
+        if (afterCount >= WEEK_MAX) window.SiteFX?.burstBig?.();  // 52주 모두 완료
+        else window.SiteFX?.burstSmall?.();                      // 매주 완료(1주 단위)
+      }
+
       render(state);
     });
+
   };
 
   const renderTTSArea = (state) => {

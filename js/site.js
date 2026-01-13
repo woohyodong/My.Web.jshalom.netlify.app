@@ -84,3 +84,34 @@
   // 전역으로 노출 (각 페이지/app.js에서 호출)
   window.SiteOverlay = { open, close, stack: STACK };
 })();
+
+// =========================
+// Effects (Confetti)
+// =========================
+(() => {
+  const reduced = () =>
+    typeof matchMedia === "function" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const fire = (opts) => {
+    if (reduced()) return;
+    if (typeof window.confetti !== "function") return;
+    try { window.confetti(opts); } catch (_) {}
+  };
+
+  const burstSmall = () => {
+      fire({ particleCount: 60, spread: 70, startVelocity: 35, origin: { y: 0.45 } });
+  };
+
+  const burstBig = () => {
+    fire({ particleCount: 160, spread: 110, startVelocity: 55, origin: { y: 0.4} });
+    setTimeout(() =>
+      fire({ particleCount: 120, spread: 90, startVelocity: 45, origin: { y: 0.4 } }),
+    180);
+  };
+
+  window.SiteFX = {
+    burstSmall,
+    burstBig,
+  };
+})();

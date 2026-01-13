@@ -118,7 +118,7 @@
             </div>
           </section>
 
-          <!-- ✅ 공유 (기존 ID 유지: #share-btn) ※보류-->
+          <!-- ✅ 공유 (보류) -->
           <!-- <section class="space-y-2">
             <button id="share-btn"
               class="w-full rounded-xl bg-blue-600 text-white py-3 font-semibold shadow-sm active:scale-[0.99]">
@@ -289,7 +289,6 @@
       closeBtn?.addEventListener("click", () => window.SiteOverlay?.close("sidenav") ?? closeNav());
       overlay?.addEventListener("click", () => window.SiteOverlay?.close("sidenav") ?? closeNav());
 
-
       // --- Reset Flow (type '아멘') ---
       const resetModal = document.getElementById("reset-modal");
       const resetOverlay = document.getElementById("reset-modal-overlay");
@@ -346,6 +345,8 @@
     })();
   </script>
 
+  <!-- ✅ confetti -> site.js 순서(권장) -->
+  <script defer src="/js/confetti.browser.min.js"></script>
   <script defer src="/js/site.js"></script>
   <script defer src="./app.js"></script>
 </body>
