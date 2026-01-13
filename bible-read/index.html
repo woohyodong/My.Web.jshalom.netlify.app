@@ -275,17 +275,20 @@
         requestAnimationFrame(() => panel.classList.remove("translate-x-full"));
         openBtn?.setAttribute("aria-expanded", "true");
         document.body.style.overflow = "hidden";
+        window.SiteOverlay?.open("sidenav", closeNav);
       }
       function closeNav() {
         panel.classList.add("translate-x-full");
         openBtn?.setAttribute("aria-expanded", "false");
         document.body.style.overflow = "";
         setTimeout(() => navRoot.classList.add("hidden"), 200);
+        window.SiteOverlay?.close("sidenav");
       }
 
       openBtn?.addEventListener("click", openNav);
-      closeBtn?.addEventListener("click", closeNav);
-      overlay?.addEventListener("click", closeNav);
+      closeBtn?.addEventListener("click", () => window.SiteOverlay?.close("sidenav") ?? closeNav());
+      overlay?.addEventListener("click", () => window.SiteOverlay?.close("sidenav") ?? closeNav());
+
 
       // --- Reset Flow (type '아멘') ---
       const resetModal = document.getElementById("reset-modal");

@@ -359,6 +359,8 @@ const openBibleModal = async (token) => {
   qs("#bible-modal").removeClass("hidden");
   qs("#bible-modal-title").text(token || "성경");
   qs("#bible-modal-subtitle").text("");
+  
+  window.SiteOverlay?.open("bible-modal", closeBibleModal);
 
   const $body = qs("#bible-modal-body");
   $body.html(`<div class="text-sm text-gray-500">불러오는 중…</div>`);
@@ -441,6 +443,7 @@ const openBibleModal = async (token) => {
   const closeBibleModal = () => {
     stopTTS();
     qs("#bible-modal").addClass("hidden");
+    window.SiteOverlay?.close("bible-modal");
   };
 
   // ---------- Reading plan / progress ----------
@@ -816,7 +819,7 @@ const openBibleModal = async (token) => {
       $(document).off("click.bibleRef").on("click.bibleRef", ".reading-ref", async (e) => {
         const ref = $(e.currentTarget).data("ref");
         if (!ref) return;
-        openBibleModal(ref);
+        openBibleModal(ref);        
       });
 
       bindBibleTTSEvents();
