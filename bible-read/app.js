@@ -249,16 +249,62 @@
 
   const escapeAttr = (s) => escapeHTML(s).replaceAll("`", "&#96;");
 
-  const parseReadingToken = (token) => {
-    const t = String(token || "").trim();
-    const m = t.match(/^([가-힣]+)\s*(\d+)(?:\s*-\s*(\d+))?$/);
-    if (!m) return null;
-    const short = m[1];
-    const start = Number(m[2]);
-    const end = m[3] ? Number(m[3]) : start;
-    if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
-    return { short, start, end };
-  };
+// ✅ (교체) "에9,10" / "눅1:1-38" / "시119:1-24" / "창9-10" 지원
+const parseReadingToken = (token) => {
+  const raw = String(token || "").trim();
+  if (!raw) return null;
+
+  // 1) 책 약어 + 나머지
+  const m = raw.match(/^([가-힣]+)\s*(.+)$/);
+  if (!m) return null;
+
+  const short = m[1].trim();
+  const rest = m[2].trim();
+  if (!rest) return null;
+
+  // 2) 쉼표로 여러 구간 분리 (에9,10 / 시52,53,54)
+  const segs = rest.split(/\s*,\s*/).filter(Boolean);
+  if (!segs.length) return null;
+
+  const parts = [];
+
+  for (const seg of segs) {
+    // seg 예: "1", "9-10", "1:1-38", "119:1-24"
+    // (A) 절 포함: ch:vStart-vEnd
+    if (seg.includes(":")) {
+      const mm = seg.match(/^(\d+)\s*:\s*(\d+)(?:\s*-\s*(\d+))?$/);
+      if (!mm) return null;
+      const ch = Number(mm[1]);
+      const vStart = Number(mm[2]);
+      const vEnd = mm[3] ? Number(mm[3]) : vStart;
+      if (![ch, vStart, vEnd].every(Number.isFinite)) return null;
+      parts.push({
+        chStart: ch,
+        chEnd: ch,
+        vStart: Math.min(vStart, vEnd),
+        vEnd: Math.max(vStart, vEnd),
+      });
+      continue;
+    }
+
+    // (B) 장만: chStart-chEnd
+    const mm = seg.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+    if (!mm) return null;
+    const chStart = Number(mm[1]);
+    const chEnd = mm[2] ? Number(mm[2]) : chStart;
+    if (![chStart, chEnd].every(Number.isFinite)) return null;
+    parts.push({
+      chStart: Math.min(chStart, chEnd),
+      chEnd: Math.max(chStart, chEnd),
+    });
+  }
+
+  // 정렬(표기 안정화)
+  parts.sort((a, b) => (a.chStart - b.chStart) || ((a.vStart ?? 0) - (b.vStart ?? 0)));
+
+  return { short, parts };
+};
+
 
   const buildBibleIndex = (rows) => {
     const shortToBook = new Map();
@@ -306,39 +352,56 @@
       .join("");
   };
 
-  const openBibleModal = async (token) => {
-    stopTTS();
+const openBibleModal = async (token) => {
+  stopTTS();
 
-    const parsed = parseReadingToken(token);
-    qs("#bible-modal").removeClass("hidden");
-    qs("#bible-modal-title").text(token || "성경");
-    qs("#bible-modal-subtitle").text("");
+  const parsed = parseReadingToken(token);
+  qs("#bible-modal").removeClass("hidden");
+  qs("#bible-modal-title").text(token || "성경");
+  qs("#bible-modal-subtitle").text("");
 
-    const $body = qs("#bible-modal-body");
-    $body.html(`<div class="text-sm text-gray-500">불러오는 중…</div>`);
+  const $body = qs("#bible-modal-body");
+  $body.html(`<div class="text-sm text-gray-500">불러오는 중…</div>`);
 
-    if (!parsed) {
-      qs("#bible-modal-subtitle").text("지원되지 않는 표기");
-      $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(token)}" 표기는 아직 지원하지 않아요.</div>`);
+  if (!parsed) {
+    qs("#bible-modal-subtitle").text("지원되지 않는 표기");
+    $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(token)}" 표기는 아직 지원하지 않아요.</div>`);
+    return;
+  }
+
+  try {
+    const idx = await loadBibleDb();
+    const bookNum = idx.shortToBook.get(parsed.short);
+    if (!bookNum) {
+      qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
+      $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 성경DB에서 찾지 못했어요.</div>`);
       return;
     }
 
-    try {
-      const idx = await loadBibleDb();
-      const bookNum = idx.shortToBook.get(parsed.short);
-      if (!bookNum) {
-        qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
-        $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 성경DB에서 찾지 못했어요.</div>`);
-        return;
-      }
+    const longLabel = idx.bookToLong.get(bookNum) || parsed.short;
 
-      const longLabel = idx.bookToLong.get(bookNum) || parsed.short;
-      const start = Math.min(parsed.start, parsed.end);
-      const end = Math.max(parsed.start, parsed.end);
+    // ✅ subtitle용 표기 정리
+    const labelParts = parsed.parts.map((p) => {
+      const ch = p.chStart === p.chEnd ? `${p.chStart}` : `${p.chStart}-${p.chEnd}`;
+      if (p.vStart != null) return `${p.chStart}:${p.vStart}-${p.vEnd}`;
+      return ch;
+    });
+    qs("#bible-modal-subtitle").text(`${escapeHTML(longLabel)} ${escapeHTML(labelParts.join(", "))}`);
 
-      let html = "";
-      for (let ch = start; ch <= end; ch++) {
-        const verses = idx.bcToVerses.get(`${bookNum}:${ch}`) || [];
+    let html = "";
+
+    for (const part of parsed.parts) {
+      for (let ch = part.chStart; ch <= part.chEnd; ch++) {
+        let verses = idx.bcToVerses.get(`${bookNum}:${ch}`) || [];
+
+        // ✅ 절 범위가 있으면 paragraph(=절) 기준으로 필터링
+        if (part.vStart != null && part.chStart === part.chEnd) {
+          verses = verses.filter((v) => {
+            const n = Number(v.p);
+            return Number.isFinite(n) && n >= part.vStart && n <= part.vEnd;
+          });
+        }
+
         html += `
           <div class="mb-5">
             <div class="font-extrabold text-gray-900">${escapeHTML(longLabel)} ${ch}장</div>
@@ -361,18 +424,19 @@
           </div>
         `;
       }
-
-      qs("#bible-modal-subtitle").text(`${escapeHTML(longLabel)} ${start}장${start !== end ? `-${end}장` : ""}`);
-      $body.html(html || `<div class="text-sm text-gray-500">표시할 내용이 없어요.</div>`);
-
-      ensureDefaultGoogleVoiceSavedIfAvailable();
-      renderBibleTTSUI();
-    } catch (e) {
-      qs("#bible-modal-subtitle").text("로드 오류");
-      $body.html(`<div class="text-sm text-red-600">본문을 불러오지 못했어요. (오프라인이거나 파일 경로를 확인해 주세요)</div>`);
-      console.error(e);
     }
-  };
+
+    $body.html(html || `<div class="text-sm text-gray-500">표시할 내용이 없어요.</div>`);
+
+    ensureDefaultGoogleVoiceSavedIfAvailable();
+    renderBibleTTSUI();
+  } catch (e) {
+    qs("#bible-modal-subtitle").text("로드 오류");
+    $body.html(`<div class="text-sm text-red-600">본문을 불러오지 못했어요. (오프라인이거나 파일 경로를 확인해 주세요)</div>`);
+    console.error(e);
+  }
+};
+
 
   const closeBibleModal = () => {
     stopTTS();
