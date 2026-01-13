@@ -104,7 +104,7 @@
 
   const tryShare = async (week) => {
     const url = buildShareUrl(week);
-    const title = "주평강교회 · 주간 암송";
+    const title = "나의신앙생활 · 주간 암송";
 
     try {
       if (navigator.share) {

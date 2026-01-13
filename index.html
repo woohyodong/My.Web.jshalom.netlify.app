@@ -11,22 +11,23 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
 
   <!-- Primary SEO -->
-  <title>주평강교회웹앱 | 52주 암송 · 365일 통독</title>
+  <title>나의신앙생활 | 52주 암송 · 365일 통독</title>
   <meta name="description" content="주평강교회 성도들을 위한 웹앱입니다. 52주 말씀 암송과 365일 성경 통독을 쉽고 편리하게 체크하고 공유할 수 있어요." />
+  <meta name="keywords" content="주평강교회, 나의신앙생활, 웹앱, 52주 암송, 365일 통독, 성경 암송, 성경 읽기, 신앙생활, 기독교, 성경 공부" />
   <meta name="robots" content="index,follow" />
   <link rel="canonical" href="https://jshalom.netlify.app/" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="주평강교회 웹앱" />
-  <meta property="og:title" content="주평강교회 웹앱 | 52주 암송 · 365일 통독" />
+  <meta property="og:site_name" content="나의신앙생활" />
+  <meta property="og:title" content="나의신앙생활 | 52주 암송 · 365일 통독" />
   <meta property="og:description" content="주평강교회 성도들을 위한 52주 암송 · 365일 통독 웹앱. 완료 체크와 공유 기능을 제공합니다." />
   <meta property="og:url" content="https://jshalom.netlify.app/" />
   <meta property="og:image" content="https://jshalom.netlify.app/icons/icon-512.png" />
 
   <!-- Twitter (optional but helpful) -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="주평강교회 웹앱 | 52주 암송 · 365일 통독" />
+  <meta name="twitter:title" content="나의신앙생활 | 52주 암송 · 365일 통독" />
   <meta name="twitter:description" content="주평강교회 성도들을 위한 52주 암송 · 365일 통독 웹앱" />
   <meta name="twitter:image" content="https://jshalom.netlify.app/icons/icon-512.png" />
 
@@ -42,19 +43,12 @@
 <body class="bg-gray-100">
   <div class="max-w-md mx-auto p-4 space-y-4">
     <!-- Header -->
-    <header class="pt-2 flex items-start justify-between">
-      <div class="w-16"></div>
-
-      <div class="text-center flex-1">
-        <h1 class="text-xl font-extrabold">주평강교회웹앱</h1>
-        <p class="text-sm text-gray-500 mt-1">ACTS 2026! 다시 복음으로!</p>
-      </div>
-
-      <!-- ✅ Share Button (우측 상단) -->
-      <button id="share-btn" class="text-sm px-2 py-1 rounded-lg bg-white shadow">
-        🔗 공유
-      </button>
+    <header class="pt-2 text-center">
+      <h1 class="text-xl font-extrabold"><strong>2026</strong>년 나의 신앙생활</h1>
+      <p class="text-sm text-gray-500 mt-1">ACTS 2026! 다시 복음으로!</p>
     </header>
+    <!-- ✅ Floating Share Button -->
+    <button id="share-btn" class="fixed bottom-5 right-5 z-40 px-4 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center gap-2 text-sm font-semibold active:scale-[0.98]">🔗 공유</button>
 
     <a href="/memorize" class="block bg-white rounded-2xl shadow p-5 active:scale-[0.99]">
       <div class="text-xs text-gray-500">📌 성경 암송</div>
@@ -74,7 +68,7 @@
     <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-5 shadow-lg">
         <div class="flex items-start justify-between gap-3">
         <div>
-            <div class="text-sm text-gray-500">주평강교회웹앱</div>
+            <div class="text-sm text-gray-500">나의신앙생활</div>
             <div class="text-lg font-bold mt-1">홈화면에 설치하면 더 편해요</div>
             <div class="text-sm text-gray-500 mt-2" id="install-desc"></div>
         </div>
@@ -103,7 +97,7 @@
     const shareBtn = document.getElementById("share-btn");
     shareBtn?.addEventListener("click", async () => {
       const url = location.origin + "/";
-      const title = "주평강교회 웹앱";
+      const title = "나의신앙생활";
       const text = "52주 암송 · 365일 통독 (주평강교회 웹앱)";
 
       try {

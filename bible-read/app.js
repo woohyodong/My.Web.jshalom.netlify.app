@@ -35,10 +35,22 @@
 
   const setTTS = (o) => safeJSON.write(BIBLE_TTS_KEY, o);
 
-  const ttsRuntime = { playing: false };
+  // ✅ runtime: 큐(청크) 재생용
+  const ttsRuntime = {
+    playing: false,
+    queue: [],
+    idx: 0,
+    utter: null,
+    session: 0, // stop/restart 구분용 토큰
+  };
 
   const stopTTS = () => {
     ttsRuntime.playing = false;
+    ttsRuntime.queue = [];
+    ttsRuntime.idx = 0;
+    ttsRuntime.utter = null;
+    ttsRuntime.session += 1; // 진행 중 onend 무효화
+
     try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (_) {}
     qs("#bible-tts-mini-status").text("");
     qs("#bible-tts-panel-status").text("");
@@ -105,14 +117,44 @@
     setTTS({ ...cfg, voiceURI: googleKo.voiceURI });
   };
 
-  const speakOnce = (text, cfg) => {
-    if (!("speechSynthesis" in window)) {
-      alert("이 브라우저는 성경듣기(TTS)를 지원하지 않아요.");
-      return null;
-    }
-    window.speechSynthesis.cancel();
+  // ✅ 긴 문장/본문을 "자연스럽게" 분리해서 큐로 (첫 청크 즉시 재생)
+  const splitForTTS = (text, maxLen = 180) => {
+    const t = sanitizeForTTS(text);
+    if (!t) return [];
 
-    const u = new SpeechSynthesisUtterance(text);
+    // 1) 구두점 기준 1차 분리
+    const rough = t
+      .split(/(?<=[\.\!\?\。\！\？…])\s+|(?<=[。])\s+|(?<=[,，;；:：])\s+|\s+(?=[-–—])/g)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    // 2) 너무 긴 덩어리는 길이 기준 2차 분리 (공백 기준)
+    const out = [];
+    for (const part of rough.length ? rough : [t]) {
+      if (part.length <= maxLen) {
+        out.push(part);
+        continue;
+      }
+      const words = part.split(/\s+/).filter(Boolean);
+      let buf = "";
+      for (const w of words) {
+        const next = buf ? `${buf} ${w}` : w;
+        if (next.length > maxLen && buf) {
+          out.push(buf);
+          buf = w;
+        } else {
+          buf = next;
+        }
+      }
+      if (buf) out.push(buf);
+    }
+    return out;
+  };
+
+  const speakChunk = (chunk, cfg) => {
+    if (!("speechSynthesis" in window)) return null;
+
+    const u = new SpeechSynthesisUtterance(chunk);
     u.lang = "ko-KR";
     u.rate = getRateByPreset(cfg.ratePreset);
 
@@ -130,6 +172,7 @@
     return sanitizeForTTS(text);
   };
 
+  // ✅ 큐 재생 (첫 청크 즉시 speak -> “바로 재생” 체감)
   const startBibleTTS = () => {
     ensureDefaultGoogleVoiceSavedIfAvailable();
     const cfg = getTTS();
@@ -139,24 +182,60 @@
       alert("읽을 본문이 없어요.");
       return;
     }
-
-    ttsRuntime.playing = true;
-    qs("#bible-tts-mini-status").text("재생 중…");
-    qs("#bible-tts-panel-status").text("재생 중…");
-
-    const u = speakOnce(text, cfg);
-    if (!u) {
-      stopTTS();
+    if (!("speechSynthesis" in window)) {
+      alert("이 브라우저는 성경듣기(TTS)를 지원하지 않아요.");
       return;
     }
 
-    u.onend = () => {
+    // 기존 재생 정리 후 새 세션 시작
+    stopTTS();
+    const mySession = ttsRuntime.session;
+
+    const queue = splitForTTS(text, 180);
+    if (!queue.length) {
+      alert("읽을 본문이 없어요.");
+      return;
+    }
+
+    ttsRuntime.playing = true;
+    ttsRuntime.queue = queue;
+    ttsRuntime.idx = 0;
+
+    qs("#bible-tts-mini-status").text("재생 중…");
+    qs("#bible-tts-panel-status").text(`재생 중… (1/${queue.length})`);
+
+    // 일부 환경 안정성
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+
+    const playNext = () => {
       if (!ttsRuntime.playing) return;
-      ttsRuntime.playing = false;
-      qs("#bible-tts-mini-status").text("");
-      qs("#bible-tts-panel-status").text("");
+      if (ttsRuntime.session !== mySession) return;
+      if (ttsRuntime.idx >= ttsRuntime.queue.length) {
+        ttsRuntime.playing = false;
+        qs("#bible-tts-mini-status").text("");
+        qs("#bible-tts-panel-status").text("");
+        return;
+      }
+
+      qs("#bible-tts-panel-status").text(`재생 중… (${ttsRuntime.idx + 1}/${queue.length})`);
+
+      const u = speakChunk(ttsRuntime.queue[ttsRuntime.idx], cfg);
+      if (!u) {
+        stopTTS();
+        return;
+      }
+      ttsRuntime.utter = u;
+
+      u.onend = () => {
+        if (!ttsRuntime.playing) return;
+        if (ttsRuntime.session !== mySession) return;
+        ttsRuntime.idx += 1;
+        playNext();
+      };
+      u.onerror = () => stopTTS();
     };
-    u.onerror = () => stopTTS();
+
+    playNext(); // ✅ 첫 청크 즉시
   };
 
   // ---------- Helpers ----------
@@ -249,7 +328,7 @@
       const bookNum = idx.shortToBook.get(parsed.short);
       if (!bookNum) {
         qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
-        $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 bible_db에서 찾지 못했어요.</div>`);
+        $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 성경DB에서 찾지 못했어요.</div>`);
         return;
       }
 
@@ -463,13 +542,10 @@
   const renderHeader = (state) => {
     const { selectedDay } = state;
 
-    // ✅ 진도 표시 (ex: 2/365)
-    qs("#day-badge").text(`${selectedDay}/${state.days}`);
-
     qs("#share-btn").off("click").on("click", async () => {
       const url = new URL(location.href);
       url.searchParams.set("day", String(selectedDay));
-      const shareData = { title: "주평강교회 · 365일 통독", text: "오늘 분량을 확인해요", url: url.toString() };
+      const shareData = { title: "나의신앙생활 · 365일 통독", text: "오늘 분량을 확인해요", url: url.toString() };
       try {
         if (navigator.share) await navigator.share(shareData);
         else {
@@ -479,7 +555,11 @@
       } catch {}
     });
 
-    qs("#go-home").off("click").on("click", () => location.assign("/"));
+    // ✅ 홈 이동 전 TTS 종료
+    qs("#go-home").off("click").on("click", () => {
+      stopTTS();
+      location.assign("/");
+    });
   };
 
   const initBottomNav = (state) => {
@@ -536,7 +616,7 @@
 
     if (ttsRuntime.playing) {
       qs("#bible-tts-mini-status").text("재생 중…");
-      qs("#bible-tts-panel-status").text("재생 중…");
+      qs("#bible-tts-panel-status").text(`재생 중… (${ttsRuntime.idx + 1}/${ttsRuntime.queue.length || 1})`);
     } else {
       qs("#bible-tts-mini-status").text("");
       qs("#bible-tts-panel-status").text("");
@@ -578,10 +658,21 @@
       renderBibleTTSUI();
     });
 
+    // ✅ 탭 숨김 / 페이지 이탈 / 뒤로가기 포함 종료
     $(document).off("visibilitychange.bibleTTS").on("visibilitychange.bibleTTS", () => {
       if (document.hidden) stopTTS();
     });
+
+    // beforeunload: 데스크탑 중심
     $(window).off("beforeunload.bibleTTS").on("beforeunload.bibleTTS", () => stopTTS());
+
+    // ✅ pagehide: iOS/Safari/모바일에서 "뒤로가기/홈화면/탭전환" 때 더 잘 잡힘
+    window.removeEventListener("pagehide", stopTTS, true);
+    window.addEventListener("pagehide", stopTTS, true);
+
+    // ✅ history.back / 브라우저 뒤로가기(히스토리 이동) 시도 포함
+    window.removeEventListener("popstate", stopTTS, true);
+    window.addEventListener("popstate", stopTTS, true);
 
     $(document).off("click.bibleClose").on("click.bibleClose", "[data-bible-close]", () => closeBibleModal());
     $(document).off("keydown.bibleEsc").on("keydown.bibleEsc", (ev) => {
@@ -599,8 +690,7 @@
     renderHeader(state);
     renderMainCard(state);
     updateNavButtons(state);
-    // ✅ 추가
-    renderProgress(state);    
+    renderProgress(state);
   };
 
   // ---------- Boot ----------
