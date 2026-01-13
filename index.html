@@ -11,24 +11,24 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
 
   <!-- Primary SEO -->
-  <title>나의신앙생활 | 52주 암송 · 365일 통독</title>
+  <title>나의신앙생활 | 52주 암송 · 365일 일독</title>
   <meta name="description" content="주평강교회 성도들을 위한 웹앱입니다. 52주 말씀 암송과 365일 성경 통독을 쉽고 편리하게 체크하고 공유할 수 있어요." />
-  <meta name="keywords" content="주평강교회, 나의신앙생활, 웹앱, 52주 암송, 365일 통독, 성경 암송, 성경 읽기, 신앙생활, 기독교, 성경 공부" />
+  <meta name="keywords" content="주평강교회, 나의신앙생활, 웹앱, 52주 암송, 365일 일독, 성경 암송, 성경 읽기, 신앙생활, 기독교, 성경 공부" />
   <meta name="robots" content="index,follow" />
   <link rel="canonical" href="https://jshalom.netlify.app/" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="나의신앙생활" />
-  <meta property="og:title" content="나의신앙생활 | 52주 암송 · 365일 통독" />
-  <meta property="og:description" content="주평강교회 성도들을 위한 52주 암송 · 365일 통독 웹앱. 완료 체크와 공유 기능을 제공합니다." />
+  <meta property="og:title" content="나의신앙생활 | 52주 암송 · 365일 일독" />
+  <meta property="og:description" content="주평강교회 성도들을 위한 52주 암송 · 365일 일독 웹앱. 완료 체크와 공유 기능을 제공합니다." />
   <meta property="og:url" content="https://jshalom.netlify.app/" />
   <meta property="og:image" content="https://jshalom.netlify.app/icons/icon-512.png" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="나의신앙생활 | 52주 암송 · 365일 통독" />
-  <meta name="twitter:description" content="주평강교회 성도들을 위한 52주 암송 · 365일 통독 웹앱" />
+  <meta name="twitter:title" content="나의신앙생활 | 52주 암송 · 365일 일독" />
+  <meta name="twitter:description" content="주평강교회 성도들을 위한 52주 암송 · 365일 일독 웹앱" />
   <meta name="twitter:image" content="https://jshalom.netlify.app/icons/icon-512.png" />
 
   <!-- PWA -->
@@ -64,10 +64,10 @@
       </div>
     </section>
 
-    <!-- 365일 통독 -->
+    <!-- 365일 일독 -->
     <a href="/bible-read" class="block bg-white rounded-2xl shadow p-5 active:scale-[0.99]">
       <div class="text-xs text-gray-500">📖 성경 일독</div>
-      <div class="text-lg font-bold mt-1">365일 통독(성경읽기표)</div>
+      <div class="text-lg font-bold mt-1">365일 일독(성경읽기표)</div>
       <!-- <div class="text-sm text-gray-500 mt-1">오늘 분량 · 누적 체크</div> -->
 
       <!-- Progress -->
@@ -177,7 +177,7 @@
     qs("share-btn")?.addEventListener("click", async () => {
       const url = location.origin + "/";
       const title = "나의신앙생활";
-      const text = "52주 암송 · 365일 통독 (주평강교회 웹앱)";
+      const text = "52주 암송 · 365일 일독 (주평강교회 웹앱)";
 
       try {
         if (navigator.share) {
@@ -209,7 +209,7 @@
         setProgressUI("memo", 0, 52);
       }
 
-      // 2) 365일 통독: localStorage: bibleRead:progress:v2 + /bible-read/data.json length
+      // 2) 365일 일독: localStorage: bibleRead:progress:v2 + /bible-read/data.json length
       try {
         const plan = await fetch("/bible-read/data.json", { cache: "no-store" }).then(r => r.json());
         const totalDays = Array.isArray(plan) ? plan.length : 365;

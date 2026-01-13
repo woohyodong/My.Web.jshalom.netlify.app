@@ -611,7 +611,7 @@ const openBibleModal = async (token) => {
     qs("#share-btn").off("click").on("click", async () => {
       const url = new URL(location.href);
       url.searchParams.set("day", String(selectedDay));
-      const shareData = { title: "나의신앙생활 · 365일 통독", text: "오늘 분량을 확인해요", url: url.toString() };
+      const shareData = { title: "나의신앙생활 · 365일 일독", text: "오늘 분량을 확인해요", url: url.toString() };
       try {
         if (navigator.share) await navigator.share(shareData);
         else {
