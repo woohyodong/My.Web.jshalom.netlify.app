@@ -109,16 +109,19 @@
     try {
       if (navigator.share) {
         await navigator.share({ title, url });
-        return;
       }
+      else {
+        await navigator.clipboard.writeText(url.toString());
+        alert("링크를 복사했어요!");
+      }      
     } catch (_) {}
 
-    try {
-      await navigator.clipboard.writeText(url);
-      alert("공유 링크가 복사되었습니다");
-    } catch (_) {
-      prompt("아래 링크를 복사해 공유하세요:", url);
-    }
+    // try {
+    //   await navigator.clipboard.writeText(url);
+    //   alert("공유 링크가 복사되었습니다");
+    // } catch (_) {
+    //   prompt("아래 링크를 복사해 공유하세요:", url);
+    // }
   };
 
   // ======================

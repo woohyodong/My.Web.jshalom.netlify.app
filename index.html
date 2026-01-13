@@ -182,16 +182,19 @@
       try {
         if (navigator.share) {
           await navigator.share({ title, text, url });
-          return;
         }
+        else {
+          await navigator.clipboard.writeText(url.toString());
+          alert("링크를 복사했어요!");
+        }        
       } catch (_) {}
 
-      try {
-        await navigator.clipboard.writeText(url);
-        alert("링크를 복사했어요!");
-      } catch (_) {
-        prompt("아래 링크를 복사해 주세요.", url);
-      }
+      // try {
+      //   await navigator.clipboard.writeText(url);
+      //   alert("링크를 복사했어요!");
+      // } catch (_) {
+      //   prompt("아래 링크를 복사해 주세요.", url);
+      // }
     });
 
     // ---------- 홈 진행률(암송/통독) ----------
