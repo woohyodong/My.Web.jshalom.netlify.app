@@ -1,4 +1,4 @@
-const CACHE_NAME = "jshalom-app-v260113.49";
+const CACHE_NAME = "jshalom-app";
 const CORE = [
   "/",
   "/index.html",
@@ -21,23 +21,63 @@ const CORE = [
   "/data/bible_db.json"
 ];
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
-});
+const IS_LOCAL =
+  self.location.hostname === "localhost" ||
+  self.location.hostname === "127.0.0.1";
 
-self.addEventListener("activate", (e) => {
+/* install */
+self.addEventListener("install", (e) => {
+  if (IS_LOCAL) return;
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.map(k => (k === CACHE_NAME ? null : caches.delete(k)))))
-      .then(() => self.clients.claim())
+    caches.open(CACHE_NAME).then((c) => c.addAll(CORE))
+      .then(() => self.skipWaiting())
   );
 });
 
+/* activate */
+self.addEventListener("activate", (e) => {
+  if (IS_LOCAL) return;
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.map(k => (k === CACHE_NAME ? null : caches.delete(k))))
+    ).then(() => self.clients.claim())
+  );
+});
+
+/* fetch */
 self.addEventListener("fetch", (e) => {
+  if (IS_LOCAL) return; // 🔑 localhost는 완전 패스
+
+  const req = e.request;
+
+  // HTML / JS / JSON → network-first
+  if (
+    req.mode === "navigate" ||
+    req.destination === "script" ||
+    req.destination === "document" ||
+    req.destination === "style" ||
+    req.url.endsWith(".json")
+  ) {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // 나머지(이미지 등) → cache-first
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE_NAME).then((c) => c.put(e.request, copy));
-      return res;
-    }))
+    caches.match(req).then(cached =>
+      cached || fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(req, copy));
+        return res;
+      })
+    )
   );
 });

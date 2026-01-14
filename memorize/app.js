@@ -563,13 +563,6 @@
   };
 
   // ======================
-  // PWA
-  // ======================
-  const initPWA = () => {
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
-  };
-
-  // ======================
   // Init
   // ======================
   (async function init() {
@@ -628,7 +621,6 @@
 
     // voices가 늦게 로드되는 경우를 대비해 1회 추가 렌더(드롭다운 채움)
     setTimeout(() => renderTTSArea(state), 300);
-
-    initPWA();
+    
   })();
 })();

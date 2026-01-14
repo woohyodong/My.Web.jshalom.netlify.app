@@ -613,7 +613,7 @@
           <span class="text-xs text-gray-500">Day ${selectedDay} / ${days}</span>
         </div>
 
-        <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900">
+        <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900 flex flex-wrap gap-2 gap-y-4">
           ${hasReadings ? renderReadingsHTML(readings) : "(데이터 준비중)"}
         </div>
 

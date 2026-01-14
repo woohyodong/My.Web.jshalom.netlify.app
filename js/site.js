@@ -106,7 +106,7 @@
   const burstBig = () => {
     fire({ particleCount: 160, spread: 110, startVelocity: 55, origin: { y: 0.4} });
     setTimeout(() =>
-      fire({ particleCount: 120, spread: 90, startVelocity: 45, origin: { y: 0.4 } }),
+      fire({ particleCount: 120, spread: 90, startVelocity: 45, origin: { y: 0.45 } }),
     180);
   };
 
