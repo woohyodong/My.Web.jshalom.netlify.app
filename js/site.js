@@ -5,24 +5,75 @@
   document.addEventListener("selectstart", (e) => e.preventDefault());
 
   // =========================
+  // Theme (Global)
+  // =========================
+  const THEME_KEY = "theme"; // "light" | "dark"
+  const root = document.documentElement;
+
+  const apply = (theme) => {
+    const isDark = theme === "dark";
+    root.classList.toggle("dark", isDark);
+
+    // (선택) 브라우저 UI 색도 맞추고 싶으면 meta theme-color도 교체 가능
+    // const meta = document.querySelector('meta[name="theme-color"]');
+    // if (meta) meta.setAttribute("content", isDark ? "#0B1220" : "#2563EB");
+  };
+
+  const get = () => localStorage.getItem(THEME_KEY) || "light";
+  const set = (theme) => {
+    localStorage.setItem(THEME_KEY, theme === "dark" ? "dark" : "light");
+    apply(get());
+  };
+  const toggle = () => set(get() === "dark" ? "light" : "dark");
+
+  // 페이지 진입 시 항상 적용(홈에서 설정한 값이 서브에 자동 반영)
+  apply(get());
+
+  // 홈에서만 버튼 바인딩할 수 있도록 헬퍼 제공
+  const bindToggleButton = (btnOrSelector) => {
+    const btn =
+      typeof btnOrSelector === "string"
+        ? document.querySelector(btnOrSelector)
+        : btnOrSelector;
+
+    if (!btn) return;
+
+    const paintIcon = () => {
+      btn.textContent = get() === "dark" ? "☀️" : "🌙";
+      btn.setAttribute("aria-label", get() === "dark" ? "라이트 모드" : "다크 모드");
+    };
+
+    paintIcon();
+    btn.addEventListener("click", () => {
+      toggle();
+      paintIcon();
+    });
+
+    // 다른 탭/창에서 바꿔도 아이콘 동기화
+    window.addEventListener("storage", (e) => {
+      if (e.key !== THEME_KEY) return;
+      apply(get());
+      paintIcon();
+    });
+  };
+
+  window.SiteTheme = { get, set, toggle, apply, bindToggleButton };
+
+  // =========================
   // Overlay Back Manager
   // =========================
   const STACK = []; // [{ key, close }]
   let internalPop = false;
 
   const top = () => STACK[STACK.length - 1];
-
   const isSameKeyOnTop = (key) => top()?.key === key;
 
   const open = (key, closeFn) => {
     if (!key || typeof closeFn !== "function") return;
-
-    // 이미 top이면 중복 push 방지
     if (isSameKeyOnTop(key)) return;
 
     STACK.push({ key, close: closeFn });
 
-    // “오버레이 1개 열림”을 히스토리에 기록 (URL은 그대로)
     try {
       history.pushState({ __overlay: true, key }, "", location.href);
     } catch (_) {}
@@ -31,11 +82,9 @@
   const close = (key, opts = {}) => {
     const { fromPopstate = false } = opts;
 
-    // key가 없으면 top 닫기
     if (!key) key = top()?.key;
     if (!key) return;
 
-    // stack에서 key 항목 제거(보통 top)
     let idx = -1;
     for (let i = STACK.length - 1; i >= 0; i--) {
       if (STACK[i].key === key) {
@@ -50,18 +99,15 @@
       item.close?.();
     } catch (_) {}
 
-    // 사용자가 '닫기 버튼'으로 닫은 경우: 우리가 쌓은 히스토리 1칸을 되돌려 정리
     if (!fromPopstate) {
       internalPop = true;
       try {
         history.back();
       } catch (_) {}
-      // popstate가 안 오는 환경 대비 안전장치
       setTimeout(() => (internalPop = false), 150);
     }
   };
 
-  // Android back(popstate) 처리
   window.addEventListener(
     "popstate",
     () => {
@@ -71,17 +117,14 @@
       }
       if (!STACK.length) return;
 
-      // “페이지 뒤로가기” 대신 “오버레이 닫기”
       const t = top();
       if (!t) return;
 
-      // popstate로 닫을 때는 history.back() 다시 호출하면 안 됨
       close(t.key, { fromPopstate: true });
     },
     true
   );
 
-  // 전역으로 노출 (각 페이지/app.js에서 호출)
   window.SiteOverlay = { open, close, stack: STACK };
 })();
 
@@ -100,18 +143,16 @@
   };
 
   const burstSmall = () => {
-      fire({ particleCount: 60, spread: 70, startVelocity: 35, origin: { y: 0.45 } });
+    fire({ particleCount: 60, spread: 70, startVelocity: 35, origin: { y: 0.45 } });
   };
 
   const burstBig = () => {
-    fire({ particleCount: 160, spread: 110, startVelocity: 55, origin: { y: 0.4} });
-    setTimeout(() =>
-      fire({ particleCount: 120, spread: 90, startVelocity: 45, origin: { y: 0.45 } }),
-    180);
+    fire({ particleCount: 160, spread: 110, startVelocity: 55, origin: { y: 0.4 } });
+    setTimeout(
+      () => fire({ particleCount: 120, spread: 90, startVelocity: 45, origin: { y: 0.45 } }),
+      180
+    );
   };
 
-  window.SiteFX = {
-    burstSmall,
-    burstBig,
-  };
+  window.SiteFX = { burstSmall, burstBig };
 })();

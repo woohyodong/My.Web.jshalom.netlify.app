@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- View-transition -->
+  <style>@view-transition {navigation: auto;}::view-transition-group {animation-duration: 5s;}</style>  
 
   <!-- Icon -->
   <link href="/favicon.ico?v=2" rel="shortcut icon" type="image/x-icon" />
@@ -34,20 +36,35 @@
   <!-- PWA -->
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#2563EB">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind (darkMode: class) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: "class" };</script>
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
   <div class="max-w-md mx-auto p-4 space-y-4">
     <!-- Header -->
-    <header class="pt-2 text-center">
-      <h1 class="text-xl font-extrabold"><strong id="year">2026</strong>년 나의 신앙생활</h1>
+    <header class="pt-2 flex items-center justify-between">
+      <div class="w-10"></div>
+
+      <h1 class="text-xl font-extrabold text-center flex-1">
+        <strong id="year">2026</strong>년 나의 신앙생활
+      </h1>
+
+      <!-- Theme Toggle (Home only) -->
+      <button id="theme-toggle"
+        class="w-10 h-10 grid place-items-center rounded-xl bg-white dark:bg-gray-800 shadow
+               active:scale-[0.95] text-xl"
+        aria-label="다크 모드">
+        🌙
+      </button>
     </header>
 
-    <!-- Key Verse (고정 말씀) -->
+    <!-- Key Verse -->
     <section class="bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-3xl shadow-lg p-5 relative overflow-hidden">
       <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full"></div>
       <div class="absolute -bottom-12 -left-12 w-48 h-48 bg-white/10 rounded-full"></div>
@@ -65,71 +82,78 @@
     </section>
 
     <!-- 365일 일독 -->
-    <a href="/bible-read" class="block bg-white rounded-2xl shadow p-5 active:scale-[0.99]">
-      <div class="text-xs text-gray-500">📖 성경 일독</div>
+    <a href="/bible-read/"
+      class="block bg-white dark:bg-gray-800 rounded-2xl shadow p-5 active:scale-[0.99]">
+      <div class="text-xs text-gray-500 dark:text-gray-300">📖 성경 일독</div>
       <div class="text-lg font-bold mt-1">365일 일독(성경읽기표)</div>
-      <!-- <div class="text-sm text-gray-500 mt-1">오늘 분량 · 누적 체크</div> -->
 
-      <!-- Progress -->
       <div class="mt-3">
-        <div class="flex items-center justify-between text-xs text-gray-500">
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
           <span>진행</span>
           <span id="read-progress-text">0 / 365</span>
         </div>
-        <div class="mt-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div class="mt-1 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
           <div id="read-progress-bar" class="h-full rounded-full bg-blue-600 w-0"></div>
         </div>
       </div>
-    </a>    
+    </a>
 
     <!-- 52주 암송 -->
-    <a href="/memorize" class="block bg-white rounded-2xl shadow p-5 active:scale-[0.99]">
-      <div class="text-xs text-gray-500">📌 성경 암송</div>
+    <a href="/memorize/"
+      class="block bg-white dark:bg-gray-800 rounded-2xl shadow p-5 active:scale-[0.99]">
+      <div class="text-xs text-gray-500 dark:text-gray-300">📌 성경 암송</div>
       <div class="text-lg font-bold mt-1">52주 암송</div>
-      <!-- <div class="text-sm text-gray-500 mt-1">매주 1구절 · 완료 체크</div> -->
 
-      <!-- Progress -->
       <div class="mt-3">
-        <div class="flex items-center justify-between text-xs text-gray-500">
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
           <span>진행</span>
           <span id="memo-progress-text">0 / 52</span>
         </div>
-        <div class="mt-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div class="mt-1 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
           <div id="memo-progress-bar" class="h-full rounded-full bg-blue-600 w-0"></div>
         </div>
       </div>
     </a>
-    
   </div>
 
   <!-- Floating Share Button -->
-  <button id="share-btn" class="fixed bottom-5 right-5 z-40 px-4 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center gap-2 text-sm font-semibold active:scale-[0.98]">🔗 공유</button>  
+  <button id="share-btn"
+    class="fixed bottom-5 right-5 z-40 px-4 h-12 rounded-full bg-blue-600 text-white shadow-lg
+           flex items-center gap-2 text-sm font-semibold active:scale-[0.98]">
+    🔗 공유
+  </button>
 
   <!-- Install Help Popup -->
   <div id="install-overlay" class="hidden fixed inset-0 bg-black/40 z-50">
-    <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-5 shadow-lg">
+    <div class="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl p-5 shadow-lg">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-sm text-gray-500">나의신앙생활</div>
+          <div class="text-sm text-gray-500 dark:text-gray-300">나의신앙생활</div>
           <div class="text-lg font-bold mt-1">홈화면에 설치하면 더 편해요</div>
-          <div class="text-sm text-gray-500 mt-2" id="install-desc"></div>
+          <div class="text-sm text-gray-500 dark:text-gray-300 mt-2" id="install-desc"></div>
         </div>
-        <button id="install-close" class="text-gray-400 text-xl leading-none">×</button>
+        <button id="install-close" class="text-gray-400 text-xl leading-none" aria-label="닫기">×</button>
       </div>
 
       <div class="mt-4 flex gap-2">
-        <button id="install-btn" class="hidden flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold active:scale-[0.99]">
+        <button id="install-btn"
+          class="hidden flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold active:scale-[0.99]">
           설치하기
         </button>
-        <button id="install-ok" class="flex-1 py-3 rounded-xl bg-gray-100 text-gray-800 font-semibold active:scale-[0.99]">
+        <button id="install-ok"
+          class="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100
+                 font-semibold active:scale-[0.99]">
           괜찮아요
         </button>
       </div>
     </div>
   </div>
 
+  <!-- site.js (Theme/Overlay 등 공통) -->
+  <script defer src="/js/site.js"></script>
+
   <script>
-    // ---------- 작은 유틸 ----------
+    // ---------- Utils ----------
     const qs = (id) => document.getElementById(id);
     const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
 
@@ -158,14 +182,13 @@
       textEl.textContent = `${done} / ${total} (${pct}%)`;
       barEl.style.width = `${(done / total) * 100}%`;
 
-      // 100%면 살짝 축하색(선택)
       if (pct >= 100) {
         barEl.classList.remove("bg-blue-600");
         barEl.classList.add("bg-emerald-600");
       }
     }
 
-    // ---------- 연도 자동 ----------
+    // ---------- Year ----------
     qs("year").textContent = new Date().getFullYear();
 
     // ---------- SW ----------
@@ -173,7 +196,7 @@
       navigator.serviceWorker.register("/sw.js");
     }
 
-    // ---------- 공유 ----------
+    // ---------- Share ----------
     qs("share-btn")?.addEventListener("click", async () => {
       const url = location.origin + "/";
       const title = "나의신앙생활";
@@ -182,24 +205,16 @@
       try {
         if (navigator.share) {
           await navigator.share({ title, text, url });
-        }
-        else {
-          await navigator.clipboard.writeText(url.toString());
+        } else {
+          await navigator.clipboard.writeText(String(url));
           alert("링크를 복사했어요!");
-        }        
+        }
       } catch (_) {}
-
-      // try {
-      //   await navigator.clipboard.writeText(url);
-      //   alert("링크를 복사했어요!");
-      // } catch (_) {
-      //   prompt("아래 링크를 복사해 주세요.", url);
-      // }
     });
 
-    // ---------- 홈 진행률(암송/통독) ----------
+    // ---------- Home Progress ----------
     async function initHomeProgress() {
-      // 1) 52주 암송: /memorize/data.json의 year → localStorage: memorized:{year}
+      // 1) 52주 암송
       try {
         const memoData = await fetch("/memorize/data.json", { cache: "no-store" }).then(r => r.json());
         const year = memoData?.year;
@@ -209,7 +224,7 @@
         setProgressUI("memo", 0, 52);
       }
 
-      // 2) 365일 일독: localStorage: bibleRead:progress:v2 + /bible-read/data.json length
+      // 2) 365일 일독
       try {
         const plan = await fetch("/bible-read/data.json", { cache: "no-store" }).then(r => r.json());
         const totalDays = Array.isArray(plan) ? plan.length : 365;
@@ -224,7 +239,7 @@
     }
     initHomeProgress();
 
-    // ---------- 설치 안내 ----------
+    // ---------- Install Help ----------
     const overlay = qs("install-overlay");
     const installBtn = qs("install-btn");
     const installOk = qs("install-ok");
@@ -252,8 +267,8 @@
       overlay.classList.add("hidden");
     }
 
-    installOk.addEventListener("click", closeInstallHelp);
-    installClose.addEventListener("click", closeInstallHelp);
+    installOk?.addEventListener("click", closeInstallHelp);
+    installClose?.addEventListener("click", closeInstallHelp);
 
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
@@ -264,7 +279,7 @@
       openInstallHelp();
     });
 
-    installBtn.addEventListener("click", async () => {
+    installBtn?.addEventListener("click", async () => {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
       await deferredPrompt.userChoice;
@@ -283,21 +298,16 @@
 
     window.addEventListener("appinstalled", () => closeInstallHelp());
 
+    // ---------- Refresh progress on BFCache / focus ----------
+    window.addEventListener("pageshow", () => initHomeProgress());
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) initHomeProgress(); });
+    window.addEventListener("focus", () => initHomeProgress());
 
-    // ✅ back으로 돌아왔을 때(BFCache 포함) 진행률 강제 갱신
-    window.addEventListener("pageshow", (e) => {
-      // e.persisted === true: BFCache로 복원된 경우
-      // persisted가 false여도 pageshow는 back/forward 네비게이션에서 호출될 수 있어 안전하게 재갱신
-      initHomeProgress();
+    // ---------- Theme Toggle bind (Home only) ----------
+    // site.js 로드 후 사용 가능
+    window.addEventListener("load", () => {
+      window.SiteTheme?.bindToggleButton("#theme-toggle");
     });
-
-    // ✅ 화면이 다시 보이는 순간(앱 전환/탭 전환 후)도 갱신
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) initHomeProgress();
-    });
-
-    // (선택) 포커스 돌아올 때도
-    window.addEventListener("focus", () => initHomeProgress());    
   </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-// memorize/app.js — 52주 암송 + 암송모드(TTS: 듣기→텀→반복) / 접힘 UI (FINAL)
+// memorize/app.js — 52주 암송 + 암송모드(TTS: 듣기→텀→반복) / 접힘 UI (REFAC)
 // - 토글은 접기/펼치기만 (재생/정지 X)
 // - ▶️/⏹ 버튼으로만 재생/정지
-// - 무료 TTS 자연스러움 개선: Google 한국어(가능 시) 디폴트 + 음성 선택 + 속도 프리셋 + 텍스트 정리
+// - Google 한국어(가능 시) 디폴트 + 음성 선택 + 속도 프리셋 + 텍스트 정리
 // - iPhone 등 Google 음성 없으면 ko-KR/ko 내장 음성으로 자동 fallback
 (() => {
   // ======================
@@ -12,7 +12,7 @@
   const WEEK_MAX = 52;
 
   const OPT_KEY = "memorize:options:v1";
-  const TTS_KEY = "memorize:tts:v4"; // v3 -> v4 (Google default 저장 로직 포함)
+  const TTS_KEY = "memorize:tts:v4";
 
   const $q = (sel) => $(sel);
   const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
@@ -35,6 +35,16 @@
   // ======================
   // Date / Week
   // ======================
+  const computeFirstMonday = (year) => {
+    // 1/1(포함) 이후 첫 월요일 (월요일이면 그대로)
+    const d = new Date(year, 0, 1);
+    const day = d.getDay(); // 0=일 ... 1=월
+    const offset = (8 - day) % 7;
+    d.setDate(d.getDate() + offset);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
   const getWeekIndex = (startDate) => {
     const start = new Date(startDate);
     const today = new Date();
@@ -66,17 +76,15 @@
   const setDoneMap = (year, map) => safeJSON.write(doneKey(year), map);
   const countDone = (map) => Object.values(map).filter(Boolean).length;
 
-  const getOptions = () =>
-    safeJSON.read(OPT_KEY, { autoNextAfterDoneCurrent: false });
-
+  const getOptions = () => safeJSON.read(OPT_KEY, { autoNextAfterDoneCurrent: false });
   const setOptions = (o) => safeJSON.write(OPT_KEY, o);
 
   const getTTS = () =>
     safeJSON.read(TTS_KEY, {
       open: false,
-      gapSec: 10,          // 암송 텀 (초)
-      ratePreset: "normal",// slow | normal | fast
-      voiceURI: "",        // 사용자가 선택한 음성(저장)
+      gapSec: 10,
+      ratePreset: "normal", // slow | normal | fast
+      voiceURI: "",
     });
 
   const setTTS = (o) => safeJSON.write(TTS_KEY, o);
@@ -109,19 +117,11 @@
     try {
       if (navigator.share) {
         await navigator.share({ title, url });
-      }
-      else {
+      } else {
         await navigator.clipboard.writeText(url.toString());
         alert("링크를 복사했어요!");
-      }      
+      }
     } catch (_) {}
-
-    // try {
-    //   await navigator.clipboard.writeText(url);
-    //   alert("공유 링크가 복사되었습니다");
-    // } catch (_) {
-    //   prompt("아래 링크를 복사해 공유하세요:", url);
-    // }
   };
 
   // ======================
@@ -152,14 +152,18 @@
     ttsRuntime.timer = null;
   };
 
+  const setTTSStatus = (msg) => {
+    $q("#tts-mini-status").text(msg || "");
+    $q("#tts-panel-status").text(msg || "");
+  };
+
   const stopTTS = () => {
     ttsRuntime.playing = false;
     clearTTSTimer();
     try {
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     } catch (_) {}
-    $q("#tts-mini-status").text("");
-    $q("#tts-panel-status").text("");
+    setTTSStatus("");
   };
 
   const sanitizeForTTS = (text) => {
@@ -188,28 +192,25 @@
   };
 
   const findGoogleKoreanVoice = (voices) => {
-    // name에 "Google" 포함 + lang이 ko 계열인 것 우선
-    const googleKo =
+    return (
       voices.find((v) => /google/i.test(v.name || "") && /^ko/i.test(v.lang || "")) ||
-      voices.find((v) => /google/i.test(v.name || "") && (v.lang || "").toLowerCase() === "ko-kr");
-    return googleKo || null;
+      voices.find((v) => /google/i.test(v.name || "") && (v.lang || "").toLowerCase() === "ko-kr") ||
+      null
+    );
   };
 
   const pickKoreanVoice = (voiceURI) => {
     const voices = getAllVoices();
     if (!voices.length) return null;
 
-    // 1) 저장된 voiceURI가 있으면 최우선
     if (voiceURI) {
       const saved = voices.find((v) => v.voiceURI === voiceURI);
       if (saved) return saved;
     }
 
-    // 2) Google 한국어가 있으면 우선
     const googleKo = findGoogleKoreanVoice(voices);
     if (googleKo) return googleKo;
 
-    // 3) 일반 한국어 fallback
     return (
       voices.find((v) => (v.lang || "").toLowerCase() === "ko-kr") ||
       voices.find((v) => (v.lang || "").toLowerCase().startsWith("ko")) ||
@@ -218,7 +219,6 @@
   };
 
   const ensureDefaultGoogleVoiceSavedIfAvailable = () => {
-    // 사용자가 이미 선택했으면 존중
     const cfg = getTTS();
     if (cfg.voiceURI) return;
 
@@ -228,7 +228,6 @@
     const googleKo = findGoogleKoreanVoice(voices);
     if (!googleKo) return;
 
-    // Google 한국어가 있으면 디폴트로 저장
     setTTS({ ...cfg, voiceURI: googleKo.voiceURI });
   };
 
@@ -252,8 +251,7 @@
   };
 
   const startTTS = (state) => {
-    const { DATA, selectedWeek } = state;
-    const verse = DATA.weeks.find((v) => v.week === selectedWeek);
+    const verse = state.DATA.weeks.find((v) => v.week === state.selectedWeek);
     if (!verse) return;
 
     ensureDefaultGoogleVoiceSavedIfAvailable();
@@ -262,9 +260,7 @@
     const text = sanitizeForTTS(verse.text);
 
     ttsRuntime.playing = true;
-    const msg = `암송: ${cfg.gapSec}초 텀`;
-    $q("#tts-mini-status").text(msg);
-    $q("#tts-panel-status").text(msg);
+    setTTSStatus(`암송: ${cfg.gapSec}초 텀`);
 
     const u = speakOnce(text, cfg);
     if (!u) {
@@ -292,22 +288,17 @@
   // Render
   // ======================
   const updateNavButtons = (state) => {
-  const w = state.selectedWeek;
-  // 첫 주면 이전 숨김
-  $q("#prev-btn").toggleClass("invisible pointer-events-none", w <= WEEK_MIN);
-
-  // 마지막 주면 다음 숨김
-  $q("#next-btn").toggleClass("invisible pointer-events-none", w >= WEEK_MAX);
-};
-
+    const w = state.selectedWeek;
+    $q("#prev-btn").toggleClass("invisible pointer-events-none", w <= WEEK_MIN);
+    $q("#next-btn").toggleClass("invisible pointer-events-none", w >= WEEK_MAX);
+  };
 
   const renderHeader = (state) => {
-    const { DATA, selectedWeek } = state;
-    const doneMap = getDoneMap(DATA.year);
+    const doneMap = getDoneMap(state.activeYear);
+    const { s, e } = weekRange(state.startDate, state.selectedWeek);
 
-    const { s, e } = weekRange(DATA.startDate, selectedWeek);
     $q("#week-badge").text(
-      `${DATA.year}년 · ${selectedWeek}주 · ${fmtKOR(s)} ~ ${fmtKOR(e)}`
+      `${state.activeYear}년 · ${state.selectedWeek}주 · ${fmtKOR(s)} ~ ${fmtKOR(e)}`
     );
     $q("#progress").text(`진행률: ${countDone(doneMap)}/${WEEK_MAX}`);
   };
@@ -318,13 +309,12 @@
   };
 
   const renderMainCard = (state) => {
-    const { DATA, selectedWeek, currentWeek } = state;
-    const verse = DATA.weeks.find((v) => v.week === selectedWeek);
+    const verse = state.DATA.weeks.find((v) => v.week === state.selectedWeek);
     if (!verse) return $q("#main-card").empty();
 
-    const doneMap = getDoneMap(DATA.year);
-    const done = !!doneMap[String(selectedWeek)];
-    const isCurrent = selectedWeek === currentWeek;
+    const doneMap = getDoneMap(state.activeYear);
+    const done = !!doneMap[String(state.selectedWeek)];
+    const isCurrent = state.selectedWeek === state.currentWeek;
 
     $q("#main-card").html(`
       <div class="bg-white rounded-2xl shadow p-5">
@@ -334,7 +324,7 @@
           }">
             ${isCurrent ? "이번 주" : "미리보기"}
           </span>
-          <span class="text-xs text-gray-500">${selectedWeek}주</span>
+          <span class="text-xs text-gray-500">${state.selectedWeek}주</span>
         </div>
 
         <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900">
@@ -350,37 +340,36 @@
       </div>
     `);
 
-    $q("#done-btn").off("click").on("click", () => {
-      stopTTS();
+    $q("#done-btn")
+      .off("click")
+      .on("click", () => {
+        stopTTS();
 
-      const beforeCount = countDone(doneMap);
-      const nowDone = !done; // 이번 클릭으로 "완료"가 되는지
-      const next = { ...doneMap, [String(selectedWeek)]: nowDone };
-      const afterCount = countDone(next);
+        const beforeCount = countDone(doneMap);
+        const nowDone = !done;
 
-      setDoneMap(DATA.year, next);
+        const nextMap = { ...doneMap, [String(state.selectedWeek)]: nowDone };
+        const afterCount = countDone(nextMap);
 
-      // ✅ 완료 체크 ON일 때만 폭죽
-      if (nowDone && afterCount > beforeCount) {
-        if (afterCount >= WEEK_MAX) window.SiteFX?.burstBig?.();  // 52주 모두 완료
-        else window.SiteFX?.burstSmall?.();                      // 매주 완료(1주 단위)
-      }
+        setDoneMap(state.activeYear, nextMap);
 
-      render(state);
-    });
+        // ✅ 완료 체크 ON일 때만 폭죽
+        if (nowDone && afterCount > beforeCount) {
+          if (afterCount >= WEEK_MAX) window.SiteFX?.burstBig?.();
+          else window.SiteFX?.burstSmall?.();
+        }
 
+        renderAll(state);
+      });
   };
 
-  const renderTTSArea = (state) => {
+  const renderTTS = (state) => {
     ensureDefaultGoogleVoiceSavedIfAvailable();
 
     const cfg = getTTS();
 
     const allVoices = getAllVoices();
-    const koVoices = allVoices.filter((v) =>
-      (v.lang || "").toLowerCase().startsWith("ko")
-    );
-
+    const koVoices = allVoices.filter((v) => (v.lang || "").toLowerCase().startsWith("ko"));
     const gapOptions = [5, 10, 20, 30];
 
     $q("#tts-area").html(`
@@ -420,19 +409,13 @@
             <div class="text-xs text-gray-500 mb-1">속도</div>
             <div class="grid grid-cols-3 gap-2">
               <button data-rate="slow" class="rate-btn rounded-xl border border-gray-200 py-2 text-sm font-semibold ${
-                cfg.ratePreset === "slow"
-                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                  : ""
+                cfg.ratePreset === "slow" ? "bg-blue-50 text-blue-700 border-blue-200" : ""
               }">조금 느림</button>
               <button data-rate="normal" class="rate-btn rounded-xl border border-gray-200 py-2 text-sm font-semibold ${
-                cfg.ratePreset === "normal"
-                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                  : ""
+                cfg.ratePreset === "normal" ? "bg-blue-50 text-blue-700 border-blue-200" : ""
               }">보통</button>
               <button data-rate="fast" class="rate-btn rounded-xl border border-gray-200 py-2 text-sm font-semibold ${
-                cfg.ratePreset === "fast"
-                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                  : ""
+                cfg.ratePreset === "fast" ? "bg-blue-50 text-blue-700 border-blue-200" : ""
               }">조금 빠름</button>
             </div>
           </div>
@@ -447,9 +430,7 @@
                 ${koVoices
                   .map(
                     (v) => `
-                  <option value="${v.voiceURI}" ${
-                      cfg.voiceURI === v.voiceURI ? "selected" : ""
-                    }>
+                  <option value="${v.voiceURI}" ${cfg.voiceURI === v.voiceURI ? "selected" : ""}>
                     ${(v.name || "Korean Voice")} (${v.lang})
                   </option>
                 `
@@ -478,59 +459,62 @@
       </div>
     `);
 
-    // ---- Events ----
-    $q("#tts-toggle").off("click").on("click", () => {
-      const cur = getTTS();
-      setTTS({ ...cur, open: !cur.open }); // UI만 토글
-      renderTTSArea(state);
-    });
+    // Events (TTS area only)
+    $q("#tts-toggle")
+      .off("click")
+      .on("click", () => {
+        const cur = getTTS();
+        setTTS({ ...cur, open: !cur.open }); // UI만 토글
+        renderTTS(state);
+      });
 
-    $q('input[name="gap-sec"]').off("change").on("change", function () {
-      const v = parseInt(this.value, 10);
-      const cur = getTTS();
-      setTTS({ ...cur, gapSec: clamp(v || 10, 1, 999) });
+    $q('input[name="gap-sec"]')
+      .off("change")
+      .on("change", function () {
+        const v = parseInt(this.value, 10);
+        const cur = getTTS();
+        setTTS({ ...cur, gapSec: clamp(v || 10, 1, 999) });
+        // 상태 표시만 즉시 반영
+        const now = getTTS();
+        if (ttsRuntime.playing) setTTSStatus(`암송: ${now.gapSec}초 텀`);
+      });
 
-      const now = getTTS();
-      const msg = `암송: ${now.gapSec}초 텀`;
-      $q("#tts-mini-status").text(msg);
-      $q("#tts-panel-status").text(msg);
-    });
+    $q(".rate-btn")
+      .off("click")
+      .on("click", function () {
+        const preset = $(this).data("rate");
+        const cur = getTTS();
+        setTTS({ ...cur, ratePreset: preset });
+        renderTTS(state);
+      });
 
-    $q(".rate-btn").off("click").on("click", function () {
-      const preset = $(this).data("rate");
-      const cur = getTTS();
-      setTTS({ ...cur, ratePreset: preset });
-      renderTTSArea(state);
-    });
+    $q("#tts-voice")
+      .off("change")
+      .on("change", function () {
+        const cur = getTTS();
+        setTTS({ ...cur, voiceURI: this.value || "" });
+      });
 
-    $q("#tts-voice").off("change").on("change", function () {
-      const cur = getTTS();
-      setTTS({ ...cur, voiceURI: this.value || "" });
-      // 재생 중이면 다음 회차부터 반영 (즉시 재시작은 사용자 의도와 다를 수 있어 유지)
-    });
-
-    $q("#tts-play").off("click").on("click", () => {
-      stopTTS();
-      startTTS(state);
-    });
+    $q("#tts-play")
+      .off("click")
+      .on("click", () => {
+        stopTTS();
+        startTTS(state);
+      });
 
     $q("#tts-stop").off("click").on("click", () => stopTTS());
 
     // 상태 반영
-    if (ttsRuntime.playing) {
-      const msg = `암송: ${cfg.gapSec}초 텀`;
-      $q("#tts-mini-status").text(msg);
-      $q("#tts-panel-status").text(msg);
-    }
+    if (ttsRuntime.playing) setTTSStatus(`암송: ${cfg.gapSec}초 텀`);
+    else setTTSStatus("");
   };
 
-  const render = (state) => {
+  const renderAll = (state) => {
     renderHeader(state);
     renderOptions();
     renderMainCard(state);
-    renderTTSArea(state);
-    // ✅ 추가
-    updateNavButtons(state);    
+    renderTTS(state);
+    updateNavButtons(state);
   };
 
   // ======================
@@ -556,10 +540,12 @@
   };
 
   const bindOptionEvents = () => {
-    $q("#auto-next-toggle").off("change").on("change", function () {
-      const cur = getOptions();
-      setOptions({ ...cur, autoNextAfterDoneCurrent: this.checked });
-    });
+    $q("#auto-next-toggle")
+      .off("change")
+      .on("change", function () {
+        const cur = getOptions();
+        setOptions({ ...cur, autoNextAfterDoneCurrent: this.checked });
+      });
   };
 
   // ======================
@@ -569,44 +555,49 @@
     const res = await fetch("./data.json", { cache: "no-store" });
     const DATA = await res.json();
 
-    // voices 준비(일부 브라우저 비동기): 준비되면 Google 디폴트 저장 시도 + UI 재렌더
+    // 연도 자동 매핑
+    const activeYear = new Date().getFullYear();
+    const startDate = computeFirstMonday(activeYear);
+
+    // voices 준비(일부 브라우저 비동기)
     if ("speechSynthesis" in window) {
       try {
         window.speechSynthesis.getVoices();
         window.speechSynthesis.onvoiceschanged = () => {
           ensureDefaultGoogleVoiceSavedIfAvailable();
-          // 현재 화면이 있으면 tts-area만 새로 그려서 드롭다운 채움
-          if (window.__memorize_state__) renderTTSArea(window.__memorize_state__);
+          if (window.__memorize_state__) renderTTS(window.__memorize_state__);
         };
       } catch (_) {}
     }
 
-    const currentWeek = getWeekIndex(DATA.startDate);
+    const currentWeek = getWeekIndex(startDate);
     const queryWeek = getQueryWeek();
     const opt = getOptions();
 
     let initialWeek = queryWeek ?? currentWeek;
 
     if (queryWeek == null && opt.autoNextAfterDoneCurrent) {
-      const doneMap = getDoneMap(DATA.year);
+      const doneMap = getDoneMap(activeYear);
       if (!!doneMap[String(currentWeek)]) {
-        initialWeek = findNextUndoneWeek(DATA.year, currentWeek);
+        initialWeek = findNextUndoneWeek(activeYear, currentWeek);
       }
     }
 
     const state = {
       DATA,
+      activeYear,
+      startDate,
       currentWeek,
       selectedWeek: clamp(initialWeek, WEEK_MIN, WEEK_MAX),
+
       setSelectedWeek: (w) => {
         stopTTS();
         state.selectedWeek = clamp(w, WEEK_MIN, WEEK_MAX);
         setQueryWeek(state.selectedWeek);
-        render(state);
+        renderAll(state);
       },
     };
 
-    // onvoiceschanged에서 접근용(최소 침습)
     window.__memorize_state__ = state;
 
     if (queryWeek == null) setQueryWeek(state.selectedWeek);
@@ -617,10 +608,9 @@
     // 초기 1회: voices가 이미 준비된 경우 Google 디폴트 저장
     ensureDefaultGoogleVoiceSavedIfAvailable();
 
-    render(state);
+    renderAll(state);
 
-    // voices가 늦게 로드되는 경우를 대비해 1회 추가 렌더(드롭다운 채움)
-    setTimeout(() => renderTTSArea(state), 300);
-    
+    // voices 늦게 로드되는 경우를 대비해 1회 추가 렌더
+    setTimeout(() => renderTTS(state), 300);
   })();
 })();
