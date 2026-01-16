@@ -607,14 +607,23 @@
     const hasReadings = Array.isArray(readings) && readings.length > 0;
 
     qs("#main-card").html(`
-      <div class="bg-white rounded-2xl shadow p-5">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5
+                  border border-gray-100 dark:border-gray-700">
         <div class="inline-flex items-center gap-2">
-          <span class="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">${cycle}독</span>
-          <span class="text-xs text-gray-500">Day ${selectedDay} / ${days}</span>
+          <span class="text-xs px-2 py-1 rounded-full
+                      bg-blue-50 text-blue-700
+                      dark:bg-blue-900/40 dark:text-blue-100">
+            ${cycle}독
+          </span>
+          <span class="text-xs text-gray-500 dark:text-gray-300">
+            Day ${selectedDay} / ${days}
+          </span>
         </div>
 
-        <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900 flex flex-wrap gap-2 gap-y-4">
-          ${hasReadings ? renderReadingsHTML(readings) : "(데이터 준비중)"}
+        <div class="mt-3 text-[17px] leading-relaxed break-words
+                    text-gray-900 dark:text-gray-100
+                    flex flex-wrap gap-2 gap-y-4">
+          ${hasReadings ? renderReadingsHTML(readings) : `<span class="text-gray-500 dark:text-gray-300">(데이터 준비중)</span>`}
         </div>
 
         <button id="done-btn"
@@ -623,11 +632,12 @@
           ${done ? "완료됨 ✓ (다시 누르면 해제)" : "읽었어요 :)"}
         </button>
 
-        <div class="mt-3 text-[11px] text-gray-400 break-all hidden">
+        <div class="mt-3 text-[11px] text-gray-400 dark:text-gray-500 break-all hidden">
           day=${selectedDay} · readings=${Array.isArray(readings) ? readings.length : "NA"}
         </div>
       </div>
     `);
+
 
     qs("#done-btn").off("click").on("click", () => {
       const p2 = loadProgress();

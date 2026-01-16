@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>나의신앙생활 · 365일 일독</title>
   <!-- View-transition -->
-  <style>@view-transition {navigation: auto;}::view-transition-group {animation-duration: 5s;}</style>    
+  <style>@view-transition {navigation: auto;}::view-transition-group {animation-duration: 5s;}</style>
 
   <!-- Primary SEO -->
   <meta name="description" content="주평강교회 성도들을 위한 365일 성경 통독 체크 웹앱. 오늘 분량 확인, 완료 체크, 성경 본문 보기/성경듣기 기능을 제공합니다." />
@@ -30,16 +30,15 @@
 
   <!-- Tailwind CDN (darkMode: class) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { darkMode: "class" };
-  </script>
-
+  <script>tailwind.config = { darkMode: "class" };</script>
   <script>
     (function () {
       if (location.pathname === "/bible-read") location.replace("/bible-read/");
     })();
     window.__BIBLE_READ_BASE__ = "/bible-read/";
   </script>
+  <style> .bible-text * {color: inherit !important;}
+</style>
 </head>
 
 <body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -198,7 +197,7 @@
           </button>
         </div>
 
-        <div id="bible-modal-body" class="px-4 py-4 overflow-auto text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">
+        <div id="bible-modal-body" class="bible-text px-4 py-4 overflow-auto text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">
           <div class="text-sm text-gray-500 dark:text-gray-300">불러오는 중…</div>
         </div>
 
@@ -225,13 +224,13 @@
             <div class="mt-2">
               <div class="text-xs text-gray-500 dark:text-gray-300 mb-1">속도</div>
               <div class="grid grid-cols-3 gap-2">
-                <button data-rate="slow" class="bible-rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold">조금 느림</button>
+                <button data-rate="slow" class="bible-rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold">느림</button>
                 <button data-rate="normal" class="bible-rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold">보통</button>
-                <button data-rate="fast" class="bible-rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold">조금 빠름</button>
+                <button data-rate="fast" class="bible-rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold">빠름</button>
               </div>
             </div>
 
-            <div class="mt-3">
+            <div class="mt-3 hidden">
               <div class="text-xs text-gray-500 dark:text-gray-300 mb-1">음성</div>
               <select id="bible-tts-voice"
                 class="w-full rounded-xl border border-gray-200 dark:border-gray-700
@@ -245,10 +244,10 @@
 
             <div class="mt-3 grid grid-cols-2 gap-2">
               <button id="bible-tts-play" class="rounded-xl bg-blue-600 text-white py-3 font-semibold shadow-sm active:scale-[0.99]">
-                ▶️ 성경듣기 시작
+                ▶ 시작
               </button>
               <button id="bible-tts-stop" class="rounded-xl border border-gray-200 dark:border-gray-700 py-3 font-semibold active:scale-[0.99]">
-                ⏹ 정지
+                ■ 정지
               </button>
             </div>
 

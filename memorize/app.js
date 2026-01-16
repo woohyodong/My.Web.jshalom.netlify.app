@@ -317,20 +317,24 @@
     const isCurrent = state.selectedWeek === state.currentWeek;
 
     $q("#main-card").html(`
-      <div class="bg-white rounded-2xl shadow p-5">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5
+                  border border-gray-100 dark:border-gray-700">
         <div class="inline-flex items-center gap-2">
-          <span class="text-xs px-2 py-1 rounded-full ${
-            isCurrent ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"
-          }">
+          <span class="text-xs px-2 py-1 rounded-full
+            ${isCurrent
+              ? "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-100"
+              : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200"
+            }">
             ${isCurrent ? "이번 주" : "미리보기"}
           </span>
-          <span class="text-xs text-gray-500">${state.selectedWeek}주</span>
+          <span class="text-xs text-gray-500 dark:text-gray-300">${state.selectedWeek}주</span>
         </div>
 
-        <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900">
+        <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900 dark:text-gray-100">
           ${verse.text}
         </div>
-        <div class="mt-3 text-sm text-gray-500">— ${verse.ref}</div>
+
+        <div class="mt-3 text-sm text-gray-500 dark:text-gray-300">— ${verse.ref}</div>
 
         <button id="done-btn"
           class="mt-4 w-full py-3 rounded-xl text-white font-semibold shadow-sm active:scale-[0.99]
@@ -353,7 +357,6 @@
 
         setDoneMap(state.activeYear, nextMap);
 
-        // ✅ 완료 체크 ON일 때만 폭죽
         if (nowDone && afterCount > beforeCount) {
           if (afterCount >= WEEK_MAX) window.SiteFX?.burstBig?.();
           else window.SiteFX?.burstSmall?.();
@@ -362,6 +365,7 @@
         renderAll(state);
       });
   };
+
 
   const renderTTS = (state) => {
     ensureDefaultGoogleVoiceSavedIfAvailable();
@@ -372,92 +376,102 @@
     const koVoices = allVoices.filter((v) => (v.lang || "").toLowerCase().startsWith("ko"));
     const gapOptions = [5, 10, 20, 30];
 
-    $q("#tts-area").html(`
-      <div class="bg-white rounded-2xl shadow p-4">
-        <button id="tts-toggle"
-          class="w-full flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3 active:scale-[0.99]">
-          <div class="flex items-center gap-2">
-            <span class="text-base">🎧</span>
-            <span class="font-semibold text-gray-900">암송(듣기)모드</span>
-            <span id="tts-mini-status" class="text-xs text-gray-500"></span>
-          </div>
-          <span class="text-sm text-gray-500">${cfg.open ? "▲" : "▼"}</span>
-        </button>
-
-        <div id="tts-panel" class="${cfg.open ? "" : "hidden"} mt-3">
-          <div class="text-xs text-gray-500 mb-2">
-            말씀을 1회 듣고, 암송할 시간을 둔 뒤 다시 들려줘요
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <div class="text-xs text-gray-500 mr-1">텀(초):</div>
-            ${gapOptions
-              .map(
-                (sec) => `
-              <label class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 text-sm">
-                <input type="radio" name="gap-sec" value="${sec}" ${
-                  Number(cfg.gapSec) === sec ? "checked" : ""
-                }>
-                <span>${sec}</span>
-              </label>
-            `
-              )
-              .join("")}
-          </div>
-
-          <div class="mt-3">
-            <div class="text-xs text-gray-500 mb-1">속도</div>
-            <div class="grid grid-cols-3 gap-2">
-              <button data-rate="slow" class="rate-btn rounded-xl border border-gray-200 py-2 text-sm font-semibold ${
-                cfg.ratePreset === "slow" ? "bg-blue-50 text-blue-700 border-blue-200" : ""
-              }">조금 느림</button>
-              <button data-rate="normal" class="rate-btn rounded-xl border border-gray-200 py-2 text-sm font-semibold ${
-                cfg.ratePreset === "normal" ? "bg-blue-50 text-blue-700 border-blue-200" : ""
-              }">보통</button>
-              <button data-rate="fast" class="rate-btn rounded-xl border border-gray-200 py-2 text-sm font-semibold ${
-                cfg.ratePreset === "fast" ? "bg-blue-50 text-blue-700 border-blue-200" : ""
-              }">조금 빠름</button>
-            </div>
-          </div>
-
-          ${
-            koVoices.length
-              ? `
-            <div class="mt-3">
-              <div class="text-xs text-gray-500 mb-1">음성</div>
-              <select id="tts-voice" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
-                <option value="">자동(가능하면 Google)</option>
-                ${koVoices
-                  .map(
-                    (v) => `
-                  <option value="${v.voiceURI}" ${cfg.voiceURI === v.voiceURI ? "selected" : ""}>
-                    ${(v.name || "Korean Voice")} (${v.lang})
-                  </option>
-                `
-                  )
-                  .join("")}
-              </select>
-              <div class="mt-1 text-[11px] text-gray-400">
-                * 기기/OS에 따라 Google 음성이 없을 수 있어요(iPhone 등)
-              </div>
-            </div>
-          `
-              : ``
-          }
-
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            <button id="tts-play" class="rounded-xl bg-blue-600 text-white py-3 font-semibold shadow-sm active:scale-[0.99]">
-              ▶️ 시작
-            </button>
-            <button id="tts-stop" class="rounded-xl border border-gray-200 py-3 font-semibold active:scale-[0.99]">
-              ⏹ 정지
-            </button>
-          </div>
-
-          <div id="tts-panel-status" class="mt-2 text-xs text-gray-500"></div>
+  $q("#tts-area").html(`
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4
+                border border-gray-100 dark:border-gray-700">
+      <button id="tts-toggle"
+        class="w-full flex items-center justify-between gap-3 rounded-xl
+              border border-gray-200 dark:border-gray-700
+              bg-white/60 dark:bg-gray-900/40
+              px-4 py-3 active:scale-[0.99]">
+        <div class="flex items-center gap-2">
+          <span class="text-base">🎧</span>
+          <span class="font-semibold text-gray-900 dark:text-gray-100">암송듣기</span>
+          <span id="tts-mini-status" class="text-xs text-gray-500 dark:text-gray-300"></span>
         </div>
+        <span class="text-sm text-gray-500 dark:text-gray-300">${cfg.open ? "▲" : "▼"}</span>
+      </button>
+
+      <div id="tts-panel" class="${cfg.open ? "" : "hidden"} mt-3">
+        <div class="text-xs text-gray-500 dark:text-gray-300 mb-2">
+          말씀을 1회 듣고, 암송할 시간을 둔 뒤 다시 들려줘요
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="text-xs text-gray-500 dark:text-gray-300 mr-1">텀(초):</div>
+          ${gapOptions.map((sec) => `
+            <label class="inline-flex items-center gap-1 px-2 py-1 rounded-lg
+                          border border-gray-200 dark:border-gray-700
+                          bg-white dark:bg-gray-900/40
+                          text-sm text-gray-800 dark:text-gray-100">
+              <input type="radio" name="gap-sec" value="${sec}" ${Number(cfg.gapSec) === sec ? "checked" : ""}>
+              <span>${sec}</span>
+            </label>
+          `).join("")}
+        </div>
+
+        <div class="mt-3">
+          <div class="text-xs text-gray-500 dark:text-gray-300 mb-1">속도</div>
+          <div class="grid grid-cols-3 gap-2">
+            <button data-rate="slow"
+              class="rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold
+                ${cfg.ratePreset === "slow"
+                  ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-100 dark:border-blue-800"
+                  : "bg-white dark:bg-gray-900/40 text-gray-800 dark:text-gray-100"
+                }">느림</button>
+
+            <button data-rate="normal"
+              class="rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold
+                ${cfg.ratePreset === "normal"
+                  ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-100 dark:border-blue-800"
+                  : "bg-white dark:bg-gray-900/40 text-gray-800 dark:text-gray-100"
+                }">보통</button>
+
+            <button data-rate="fast"
+              class="rate-btn rounded-xl border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold
+                ${cfg.ratePreset === "fast"
+                  ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-100 dark:border-blue-800"
+                  : "bg-white dark:bg-gray-900/40 text-gray-800 dark:text-gray-100"
+                }">빠름</button>
+          </div>
+        </div>
+
+        ${koVoices.length ? `
+          <div class="mt-3 hidden">
+            <div class="text-xs text-gray-500 dark:text-gray-300 mb-1">음성</div>
+            <select id="tts-voice"
+              class="w-full rounded-xl border border-gray-200 dark:border-gray-700
+                    bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100">
+              <option value="">자동(가능하면 Google)</option>
+              ${koVoices.map((v) => `
+                <option value="${v.voiceURI}" ${cfg.voiceURI === v.voiceURI ? "selected" : ""}>
+                  ${(v.name || "Korean Voice")} (${v.lang})
+                </option>
+              `).join("")}
+            </select>
+            <div class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+              * 기기/OS에 따라 Google 음성이 없을 수 있어요(iPhone 등)
+            </div>
+          </div>
+        ` : ``}
+
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button id="tts-play" class="rounded-xl bg-blue-600 text-white py-3 font-semibold shadow-sm active:scale-[0.99]">
+            ▶ 시작
+          </button>
+          <button id="tts-stop"
+            class="rounded-xl border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900/40
+                  text-gray-800 dark:text-gray-100
+                  py-3 font-semibold active:scale-[0.99]">
+            ■ 정지
+          </button>
+        </div>
+
+        <div id="tts-panel-status" class="mt-2 text-xs text-gray-500 dark:text-gray-300"></div>
       </div>
-    `);
+    </div>
+  `);
 
     // Events (TTS area only)
     $q("#tts-toggle")
