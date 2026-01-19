@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <!-- View-transition -->
-  <style>@view-transition {navigation: auto;}::view-transition-group {animation-duration: 5s;}</style>  
+  <style>@view-transition {navigation: auto;}::view-transition-group {animation-duration: 5s;}</style>
 
   <!-- Icon -->
   <link href="/favicon.ico?v=2" rel="shortcut icon" type="image/x-icon" />
@@ -51,9 +51,13 @@
     <header class="pt-2 flex items-center justify-between">
       <div class="w-10"></div>
 
-      <h1 class="text-xl font-extrabold text-center flex-1">
-        <strong id="year">2026</strong>년 나의 신앙생활
-      </h1>
+      <div class="text-center">
+        <h1 class="text-xl font-extrabold text-center flex-1">
+          <strong id="year">2026</strong>년 나의 신앙생활
+        </h1>
+        <small class="">ACTS 2026! 다시 복음으로!</small>
+      </div>
+
 
       <!-- Theme Toggle (Home only) -->
       <button id="theme-toggle"
@@ -212,32 +216,64 @@
       } catch (_) {}
     });
 
-    // ---------- Home Progress ----------
-    async function initHomeProgress() {
-      // 1) 52주 암송
-      try {
-        const memoData = await fetch("/memorize/data.json", { cache: "no-store" }).then(r => r.json());
-        const year = memoData?.year;
-        const doneMap = safeJSON.read(`memorized:${year}`, {});
-        setProgressUI("memo", countDoneMap(doneMap), 52);
-      } catch (_) {
-        setProgressUI("memo", 0, 52);
+  // ---------- Home Progress ----------
+  async function initHomeProgress() {
+    // 1) 52주 암송 (✅ year 유동 대응)
+    try {
+      const memoData = await fetch("/memorize/data.json", { cache: "no-store" }).then(r => r.json());
+      const totalWeeks = Array.isArray(memoData?.weeks) ? memoData.weeks.length : 52;
+
+      const currentYear = new Date().getFullYear();
+
+      // localStorage에 저장된 memorized:* 키 중에서 "현재 연도 우선, 없으면 완료가 가장 많은 연도" 선택
+      const memoKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("memorized:")) memoKeys.push(k);
       }
 
-      // 2) 365일 일독
-      try {
-        const plan = await fetch("/bible-read/data.json", { cache: "no-store" }).then(r => r.json());
-        const totalDays = Array.isArray(plan) ? plan.length : 365;
+      const pickYear = () => {
+        // 1) 현재 연도 데이터가 있으면 그걸 사용
+        if (localStorage.getItem(`memorized:${currentYear}`)) return currentYear;
 
-        const p = safeJSON.read("bibleRead:progress:v2", { activeCycle: 1, cycles: {} });
-        const cycle = String(p.activeCycle || 1);
-        const doneMap = p.cycles?.[cycle]?.completed || {};
-        setProgressUI("read", countDoneMap(doneMap), totalDays);
-      } catch (_) {
-        setProgressUI("read", 0, 365);
-      }
+        // 2) 없으면 memorized:* 중 가장 많이 완료된 연도 선택
+        let bestYear = currentYear;
+        let bestCount = -1;
+
+        for (const k of memoKeys) {
+          const y = parseInt(k.split(":")[1], 10);
+          const map = safeJSON.read(k, {});
+          const c = countDoneMap(map);
+          if (c > bestCount) {
+            bestCount = c;
+            bestYear = Number.isFinite(y) ? y : currentYear;
+          }
+        }
+        return bestYear;
+      };
+
+      const year = pickYear();
+      const doneMap = safeJSON.read(`memorized:${year}`, {});
+      setProgressUI("memo", countDoneMap(doneMap), totalWeeks);
+    } catch (_) {
+      setProgressUI("memo", 0, 52);
     }
-    initHomeProgress();
+
+    // 2) 365일 일독 (기존 그대로)
+    try {
+      const plan = await fetch("/bible-read/data.json", { cache: "no-store" }).then(r => r.json());
+      const totalDays = Array.isArray(plan) ? plan.length : 365;
+
+      const p = safeJSON.read("bibleRead:progress:v2", { activeCycle: 1, cycles: {} });
+      const cycle = String(p.activeCycle || 1);
+      const doneMap = p.cycles?.[cycle]?.completed || {};
+      setProgressUI("read", countDoneMap(doneMap), totalDays);
+    } catch (_) {
+      setProgressUI("read", 0, 365);
+    }
+  }
+
+  initHomeProgress();
 
     // ---------- Install Help ----------
     const overlay = qs("install-overlay");
