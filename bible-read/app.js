@@ -2,6 +2,7 @@
   // =========================================================
   // 0) Core Utils / Constants
   // =========================================================
+  let currentBibleCtx = null; 
   const DAY_MIN = 1;
 
   const qs = (sel) => $(sel);
@@ -36,77 +37,22 @@
   const escapeAttr = (s) => escapeHTML(s).replaceAll("`", "&#96;");
 
   // =========================================================
-  // 1) External App Launch (GoodTVBible) - PWA Safe
+  // 1) External Link (GoodTVBible Web) - Open in new tab
   // =========================================================
   const GOODTV = Object.freeze({
-    pkg: "kr.co.GoodTVBible",
-    play: "https://play.google.com/store/apps/details?id=kr.co.GoodTVBible",
-    // NOTE: 딥링크 스킴/경로 미확정 → "앱 실행" 목적
-    intent: "intent://open#Intent;package=kr.co.GoodTVBible;end",
+    base: "https://goodtvbible.goodtv.co.kr",
+    // onbibleread/{ver}/{book}/{chapter}
+    // ver: 0=개역개정 (추정) / 다른 값은 사이트/앱에서 지원 (예: 3,4,6 등 존재) :contentReference[oaicite:1]{index=1}
+    version: 0,
   });
 
-  const isAndroid = () => /Android/i.test(navigator.userAgent || "");
-
-  /**
-   * 앱 실행 시도 → 성공(페이지 hidden/blur/pagehide 감지)하면 종료
-   * 실패하면 timeout 후 fallbackUrl로 이동
-   */
-  const tryOpenApp = ({
-    primaryUrl,
-    fallbackUrl,
-    timeoutMs = 1200,
-    androidOnly = true,
-  } = {}) => {
-    if (!primaryUrl) return;
-
-    if (androidOnly && !isAndroid()) {
-      if (fallbackUrl) location.href = fallbackUrl;
-      return;
-    }
-
-    let done = false;
-
-    const cleanup = () => {
-      document.removeEventListener("visibilitychange", onVis, true);
-      window.removeEventListener("pagehide", onHide, true);
-      window.removeEventListener("blur", onBlur, true);
-    };
-
-    const markSuccess = () => {
-      if (done) return;
-      done = true;
-      cleanup();
-    };
-
-    const fallback = () => {
-      if (done) return;
-      done = true;
-      cleanup();
-      if (fallbackUrl) location.href = fallbackUrl;
-    };
-
-    const onVis = () => {
-      if (document.visibilityState === "hidden") markSuccess();
-    };
-    const onHide = () => markSuccess();
-    const onBlur = () => markSuccess();
-
-    // capture=true: 다른 핸들러와 충돌 최소화
-    document.addEventListener("visibilitychange", onVis, true);
-    window.addEventListener("pagehide", onHide, true);
-    window.addEventListener("blur", onBlur, true);
-
-    location.href = primaryUrl;
-    setTimeout(fallback, timeoutMs);
+  const openInNewTab = (url) => {
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const openGoodTvBibleApp = () => {
-    tryOpenApp({
-      primaryUrl: GOODTV.intent,
-      fallbackUrl: GOODTV.play,
-      timeoutMs: 1200,
-      androidOnly: true,
-    });
+  const buildGoodTvBibleReadUrl = ({ version = GOODTV.version, book, chapter }) => {
+    if (!book || !chapter) return `${GOODTV.base}/`;
+    return `${GOODTV.base}/onbibleread/${encodeURIComponent(version)}/${encodeURIComponent(book)}/${encodeURIComponent(chapter)}`;
   };
 
   // =========================================================
@@ -508,6 +454,10 @@
 
     const parsed = parseReadingToken(token);
 
+    // ✅ 링크용 컨텍스트 구성: "첫 구간의 첫 장"으로 웹 성경 읽기 이동
+    const firstPart = parsed.parts?.[0];
+    const firstChapter = firstPart?.chStart;
+
     qs("#bible-modal").removeClass("hidden");
     qs("#bible-modal-title").text(token || "성경");
     qs("#bible-modal-subtitle").text("");
@@ -529,6 +479,15 @@
     try {
       const idx = await loadBibleDb();
       const bookNum = idx.shortToBook.get(parsed.short);
+
+      currentBibleCtx = {
+        token,
+        version: GOODTV.version,
+        bookNum: bookNum,          // GOODTV onbibleread의 book 번호와 동일하다고 가정(현재 DB의 book)
+        chapter: firstChapter || 1,
+        vStart: firstPart?.vStart ?? null,
+        vEnd: firstPart?.vEnd ?? null,
+      };          
 
       if (!bookNum) {
         qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
@@ -950,9 +909,16 @@
   const bindOpenBibleAppBtn = () => {
     qs("#open-bible-app").off("click").on("click", (e) => {
       e.preventDefault();
-      openGoodTvBibleApp();
+      const ctx = currentBibleCtx;
+      const url = ctx
+        ? buildGoodTvBibleReadUrl({ version: ctx.version, book: ctx.bookNum, chapter: ctx.chapter })
+        : `${GOODTV.base}/`;
+
+      openInNewTab(url);
     });
   };
+
+
 
   const bindBibleTTSEvents = () => {
     qs("#bible-tts-toggle").off("click").on("click", () => {
