@@ -1,22 +1,61 @@
 (() => {
 // ✅ GoodTVBible 딥링크(안전 폴백 포함)
+
 const GOODTV_PKG = "kr.co.GoodTVBible";
 const GOODTV_PLAY = "https://play.google.com/store/apps/details?id=kr.co.GoodTVBible";
 
 const buildGoodTvIntentUrl = () => {
-  // Android Chrome에서 가장 잘 먹는 방식: intent://
-  // (딥링크 path는 모를 때 "launch" 느낌으로 둠)
-  return `intent://open#Intent;scheme=goodtvbible;package=${GOODTV_PKG};S.browser_fallback_url=${encodeURIComponent(GOODTV_PLAY)};end`;
+  // ✅ fallback을 Intent에 넣지 않음 (설치돼 있어도 스킴 미해석이면 바로 스토어로 튀는 문제 방지)
+  return `intent://open#Intent;package=${GOODTV_PKG};end`;
 };
 
 const openGoodTvBibleApp = () => {
   const ua = navigator.userAgent || "";
   const isAndroid = /Android/i.test(ua);
+  if (!isAndroid) {
+    location.href = GOODTV_PLAY;
+    return;
+  }
 
-  // Android면 intent, 아니면 스토어로
-  location.href = isAndroid ? buildGoodTvIntentUrl() : GOODTV_PLAY;
+  let redirected = false;
+
+  const cleanup = () => {
+    document.removeEventListener("visibilitychange", onVis);
+    window.removeEventListener("pagehide", onHide);
+    window.removeEventListener("blur", onBlur);
+  };
+
+  const goStore = () => {
+    if (redirected) return;
+    redirected = true;
+    cleanup();
+    location.href = GOODTV_PLAY;
+  };
+
+  // ✅ 앱으로 전환되면(성공) 페이지가 hidden/blur/pagehide로 변함 → 스토어 이동 취소
+  const onVis = () => {
+    if (document.visibilityState === "hidden") {
+      redirected = true;
+      cleanup();
+    }
+  };
+  const onHide = () => { redirected = true; cleanup(); };
+  const onBlur = () => { redirected = true; cleanup(); };
+
+  document.addEventListener("visibilitychange", onVis);
+  window.addEventListener("pagehide", onHide);
+  window.addEventListener("blur", onBlur);
+
+  // 1) 먼저 앱 실행 시도
+  location.href = buildGoodTvIntentUrl();
+
+  // 2) 일정 시간 내 전환이 없으면(실패) 그때만 스토어로
+  setTimeout(() => {
+    if (!redirected) goStore();
+  }, 1200);
 };
 
+// ✅ GoodTVBible 딥링크(안전 폴백 포함) -----------
 
   const DAY_MIN = 1;
   const qs = (sel) => $(sel);
