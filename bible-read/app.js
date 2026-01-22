@@ -36,6 +36,38 @@
 
   const escapeAttr = (s) => escapeHTML(s).replaceAll("`", "&#96;");
 
+
+  // =========================================================
+  // GOODTV Bible MP3 (공식 음원)
+  // =========================================================
+  const GOODTV_AUDIO_BASE =
+    "https://online.goodtv.co.kr/online_bible/goodtvbible/Revision";
+
+  const pad3 = (n) => String(n).padStart(3, "0");
+
+  const buildGoodTvBibleAudioUrl = (bookNum, chapter) => {
+    if (!Number.isFinite(bookNum) || !Number.isFinite(chapter)) return null;
+    return `${GOODTV_AUDIO_BASE}/${bookNum}/${pad3(chapter)}.mp3`;
+  };
+
+  const playGoodTvBibleAudio = () => {
+    const ctx = currentBibleCtx;
+    if (!ctx) {
+      alert("성경을 먼저 선택해 주세요.");
+      return;
+    }
+
+    const url = buildGoodTvBibleAudioUrl(ctx.bookNum, ctx.chapter);
+    if (!url) {
+      alert("음원 주소를 만들 수 없어요.");
+      return;
+    }
+
+    // 새 탭 대신 오디오 재생 (브라우저 기본 플레이어)
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+
   // =========================================================
   // 1) External Link (GoodTVBible Web) - Open in new tab
   // =========================================================
@@ -906,17 +938,23 @@
     }
   };
 
-  const bindOpenBibleAppBtn = () => {
-    qs("#open-bible-app").off("click").on("click", (e) => {
-      e.preventDefault();
-      const ctx = currentBibleCtx;
-      const url = ctx
-        ? buildGoodTvBibleReadUrl({ version: ctx.version, book: ctx.bookNum, chapter: ctx.chapter })
-        : `${GOODTV.base}/`;
+  // const bindOpenBibleAppBtn = () => {
+  //   qs("#open-bible-app").off("click").on("click", (e) => {
+  //     e.preventDefault();
+  //     const ctx = currentBibleCtx;
+  //     const url = ctx
+  //       ? buildGoodTvBibleReadUrl({ version: ctx.version, book: ctx.bookNum, chapter: ctx.chapter })
+  //       : `${GOODTV.base}/`;
 
-      openInNewTab(url);
+  //     openInNewTab(url);
+  //   });
+  // };
+
+  const bindGoodTvBibleAudioBtn = () => {
+    qs("#open-bible-audio").off("click").on("click", () => {
+      playGoodTvBibleAudio();
     });
-  };
+  };  
 
 
 
@@ -984,7 +1022,8 @@
         if (ev.key === "Escape") closeBibleModal();
       });
 
-    bindOpenBibleAppBtn();
+    //bindOpenBibleAppBtn();
+    bindGoodTvBibleAudioBtn();
   };
 
   // =========================================================
