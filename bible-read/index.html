@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>나의신앙생활 · 365일 일독</title>
   <!-- View-transition -->
-  <style>@view-transition {navigation: auto;}::view-transition-group {animation-duration: 5s;}</style>
+  <!-- <style>@view-transition {navigation: auto;}::view-transition-group {animation-duration: 5s;}</style> -->
 
   <!-- Primary SEO -->
   <meta name="description" content="주평강교회 성도들을 위한 365일 성경 통독 체크 웹앱. 오늘 분량 확인, 완료 체크, 성경 본문 보기/성경듣기 기능을 제공합니다." />
@@ -190,11 +190,20 @@
             <div id="bible-modal-title" class="text-sm font-extrabold text-gray-900 dark:text-gray-100">성경</div>
             <div id="bible-modal-subtitle" class="text-xs text-gray-500 dark:text-gray-300 mt-0.5">내용</div>
           </div>
-          <button type="button"
-            class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 font-semibold"
-            data-bible-close>
-            닫기
-          </button>
+          <!-- ✅ 여기만 교체 -->
+          <div class="flex items-center gap-2">
+            <a id="open-bible-app" href="#"
+              class="px-3 py-2 rounded-xl bg-blue-600 text-white font-semibold active:scale-[0.99]"
+              rel="noopener">
+              성경앱 실행
+            </a>
+
+            <button type="button"
+              class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 font-semibold"
+              data-bible-close>
+              닫기
+            </button>
+          </div>
         </div>
 
         <div id="bible-modal-body" class="bible-text px-4 py-4 overflow-auto text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">

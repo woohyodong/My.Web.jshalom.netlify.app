@@ -1,4 +1,23 @@
 (() => {
+// ✅ GoodTVBible 딥링크(안전 폴백 포함)
+const GOODTV_PKG = "kr.co.GoodTVBible";
+const GOODTV_PLAY = "https://play.google.com/store/apps/details?id=kr.co.GoodTVBible";
+
+const buildGoodTvIntentUrl = () => {
+  // Android Chrome에서 가장 잘 먹는 방식: intent://
+  // (딥링크 path는 모를 때 "launch" 느낌으로 둠)
+  return `intent://open#Intent;scheme=goodtvbible;package=${GOODTV_PKG};S.browser_fallback_url=${encodeURIComponent(GOODTV_PLAY)};end`;
+};
+
+const openGoodTvBibleApp = () => {
+  const ua = navigator.userAgent || "";
+  const isAndroid = /Android/i.test(ua);
+
+  // Android면 intent, 아니면 스토어로
+  location.href = isAndroid ? buildGoodTvIntentUrl() : GOODTV_PLAY;
+};
+
+
   const DAY_MIN = 1;
   const qs = (sel) => $(sel);
   const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
@@ -832,6 +851,11 @@
     $(document).off("keydown.bibleEsc").on("keydown.bibleEsc", (ev) => {
       if (ev.key === "Escape") closeBibleModal();
     });
+
+    qs("#open-bible-app").off("click").on("click", (e) => {
+      e.preventDefault();
+      openGoodTvBibleApp();
+    });    
   };
 
   const updateNavButtons = (state) => {
