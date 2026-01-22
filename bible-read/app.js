@@ -1,61 +1,83 @@
 (() => {
-// ✅ GoodTVBible 딥링크(안전 폴백 포함)
 
-const GOODTV_PKG = "kr.co.GoodTVBible";
-const GOODTV_PLAY = "https://play.google.com/store/apps/details?id=kr.co.GoodTVBible";
+  // ✅ GoodTVBible App Launch (PWA 안전 실행 + Play fallback)
+const GOODTV = Object.freeze({
+  pkg: "kr.co.GoodTVBible",
+  play: "https://play.google.com/store/apps/details?id=kr.co.GoodTVBible",
+  // NOTE: 딥링크 스킴/경로를 아직 모름 → 일단 "앱 실행" 용도로만 사용
+  intent: "intent://open#Intent;package=kr.co.GoodTVBible;end",
+});
 
-const buildGoodTvIntentUrl = () => {
-  // ✅ fallback을 Intent에 넣지 않음 (설치돼 있어도 스킴 미해석이면 바로 스토어로 튀는 문제 방지)
-  return `intent://open#Intent;package=${GOODTV_PKG};end`;
-};
+const isAndroid = () => /Android/i.test(navigator.userAgent || "");
 
-const openGoodTvBibleApp = () => {
-  const ua = navigator.userAgent || "";
-  const isAndroid = /Android/i.test(ua);
-  if (!isAndroid) {
-    location.href = GOODTV_PLAY;
+/**
+ * 앱 실행 시도 → 성공(페이지 hidden/blur/pagehide 감지)하면 종료
+ * 실패하면 timeout 후 fallbackUrl로 이동
+ */
+const tryOpenApp = ({
+  primaryUrl,
+  fallbackUrl,
+  timeoutMs = 1200,
+  // Android 전용 실행인지
+  androidOnly = true,
+} = {}) => {
+  if (!primaryUrl) return;
+
+  if (androidOnly && !isAndroid()) {
+    if (fallbackUrl) location.href = fallbackUrl;
     return;
   }
 
-  let redirected = false;
+  let done = false;
 
   const cleanup = () => {
-    document.removeEventListener("visibilitychange", onVis);
-    window.removeEventListener("pagehide", onHide);
-    window.removeEventListener("blur", onBlur);
+    document.removeEventListener("visibilitychange", onVis, true);
+    window.removeEventListener("pagehide", onHide, true);
+    window.removeEventListener("blur", onBlur, true);
   };
 
-  const goStore = () => {
-    if (redirected) return;
-    redirected = true;
+  const markSuccess = () => {
+    if (done) return;
+    done = true;
     cleanup();
-    location.href = GOODTV_PLAY;
   };
 
-  // ✅ 앱으로 전환되면(성공) 페이지가 hidden/blur/pagehide로 변함 → 스토어 이동 취소
+  const fallback = () => {
+    if (done) return;
+    done = true;
+    cleanup();
+    if (fallbackUrl) location.href = fallbackUrl;
+  };
+
+  // ✅ 앱으로 전환되면(성공) 브라우저가 hidden/blur/pagehide로 바뀌는 케이스가 많음
   const onVis = () => {
-    if (document.visibilityState === "hidden") {
-      redirected = true;
-      cleanup();
-    }
+    if (document.visibilityState === "hidden") markSuccess();
   };
-  const onHide = () => { redirected = true; cleanup(); };
-  const onBlur = () => { redirected = true; cleanup(); };
+  const onHide = () => markSuccess();
+  const onBlur = () => markSuccess();
 
-  document.addEventListener("visibilitychange", onVis);
-  window.addEventListener("pagehide", onHide);
-  window.addEventListener("blur", onBlur);
+  // capture=true: 다른 핸들러와 충돌 최소화
+  document.addEventListener("visibilitychange", onVis, true);
+  window.addEventListener("pagehide", onHide, true);
+  window.addEventListener("blur", onBlur, true);
 
-  // 1) 먼저 앱 실행 시도
-  location.href = buildGoodTvIntentUrl();
+  // 1) 앱 실행 우선
+  location.href = primaryUrl;
 
-  // 2) 일정 시간 내 전환이 없으면(실패) 그때만 스토어로
-  setTimeout(() => {
-    if (!redirected) goStore();
-  }, 1200);
+  // 2) 전환 감지가 없으면 fallback
+  setTimeout(fallback, timeoutMs);
 };
 
-// ✅ GoodTVBible 딥링크(안전 폴백 포함) -----------
+const openGoodTvBibleApp = () => {
+  tryOpenApp({
+    primaryUrl: GOODTV.intent,
+    fallbackUrl: GOODTV.play,
+    timeoutMs: 1200,
+    androidOnly: true,
+  });
+};
+// ✅ GoodTVBible App Launch END
+
 
   const DAY_MIN = 1;
   const qs = (sel) => $(sel);
@@ -798,6 +820,12 @@ const openGoodTvBibleApp = () => {
     });
   };
 
+  const bindOpenBibleAppBtn = () => {
+    qs("#open-bible-app").off("click").on("click", (e) => {
+      e.preventDefault();
+      openGoodTvBibleApp();
+    });
+  };  
   // ---------- Bible TTS UI render/bind ----------
   const renderBibleTTSUI = () => {
     const cfg = getTTS();
@@ -891,10 +919,7 @@ const openGoodTvBibleApp = () => {
       if (ev.key === "Escape") closeBibleModal();
     });
 
-    qs("#open-bible-app").off("click").on("click", (e) => {
-      e.preventDefault();
-      openGoodTvBibleApp();
-    });    
+    bindOpenBibleAppBtn();
   };
 
   const updateNavButtons = (state) => {
