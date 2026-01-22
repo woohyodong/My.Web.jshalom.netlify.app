@@ -1,95 +1,13 @@
 (() => {
-
-  // ✅ GoodTVBible App Launch (PWA 안전 실행 + Play fallback)
-const GOODTV = Object.freeze({
-  pkg: "kr.co.GoodTVBible",
-  play: "https://play.google.com/store/apps/details?id=kr.co.GoodTVBible",
-  // NOTE: 딥링크 스킴/경로를 아직 모름 → 일단 "앱 실행" 용도로만 사용
-  intent: "intent://open#Intent;package=kr.co.GoodTVBible;end",
-});
-
-const isAndroid = () => /Android/i.test(navigator.userAgent || "");
-
-/**
- * 앱 실행 시도 → 성공(페이지 hidden/blur/pagehide 감지)하면 종료
- * 실패하면 timeout 후 fallbackUrl로 이동
- */
-const tryOpenApp = ({
-  primaryUrl,
-  fallbackUrl,
-  timeoutMs = 1200,
-  // Android 전용 실행인지
-  androidOnly = true,
-} = {}) => {
-  if (!primaryUrl) return;
-
-  if (androidOnly && !isAndroid()) {
-    if (fallbackUrl) location.href = fallbackUrl;
-    return;
-  }
-
-  let done = false;
-
-  const cleanup = () => {
-    document.removeEventListener("visibilitychange", onVis, true);
-    window.removeEventListener("pagehide", onHide, true);
-    window.removeEventListener("blur", onBlur, true);
-  };
-
-  const markSuccess = () => {
-    if (done) return;
-    done = true;
-    cleanup();
-  };
-
-  const fallback = () => {
-    if (done) return;
-    done = true;
-    cleanup();
-    if (fallbackUrl) location.href = fallbackUrl;
-  };
-
-  // ✅ 앱으로 전환되면(성공) 브라우저가 hidden/blur/pagehide로 바뀌는 케이스가 많음
-  const onVis = () => {
-    if (document.visibilityState === "hidden") markSuccess();
-  };
-  const onHide = () => markSuccess();
-  const onBlur = () => markSuccess();
-
-  // capture=true: 다른 핸들러와 충돌 최소화
-  document.addEventListener("visibilitychange", onVis, true);
-  window.addEventListener("pagehide", onHide, true);
-  window.addEventListener("blur", onBlur, true);
-
-  // 1) 앱 실행 우선
-  location.href = primaryUrl;
-
-  // 2) 전환 감지가 없으면 fallback
-  setTimeout(fallback, timeoutMs);
-};
-
-const openGoodTvBibleApp = () => {
-  tryOpenApp({
-    primaryUrl: GOODTV.intent,
-    fallbackUrl: GOODTV.play,
-    timeoutMs: 1200,
-    androidOnly: true,
-  });
-};
-// ✅ GoodTVBible App Launch END
-
-
+  // =========================================================
+  // 0) Core Utils / Constants
+  // =========================================================
   const DAY_MIN = 1;
+
   const qs = (sel) => $(sel);
   const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
 
-  // ---------- Bible DB ----------
-  const BIBLE_DB_URL = "/data/bible_db.json";
-  let __bibleDbPromise = null;
-  let __bibleIndex = null;
-
-  // ---------- TTS (암송 쪽 방식 이식: Google 우선) ----------
-  const BIBLE_TTS_KEY = "bibleRead:tts:v1";
+  const nowIso = () => new Date().toISOString();
 
   const safeJSON = {
     read(key, fallback) {
@@ -106,16 +24,196 @@ const openGoodTvBibleApp = () => {
     },
   };
 
+  // HTML escape helpers
+  const escapeHTML = (s) =>
+    String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+
+  const escapeAttr = (s) => escapeHTML(s).replaceAll("`", "&#96;");
+
+  // =========================================================
+  // 1) External App Launch (GoodTVBible) - PWA Safe
+  // =========================================================
+  const GOODTV = Object.freeze({
+    pkg: "kr.co.GoodTVBible",
+    play: "https://play.google.com/store/apps/details?id=kr.co.GoodTVBible",
+    // NOTE: 딥링크 스킴/경로 미확정 → "앱 실행" 목적
+    intent: "intent://open#Intent;package=kr.co.GoodTVBible;end",
+  });
+
+  const isAndroid = () => /Android/i.test(navigator.userAgent || "");
+
+  /**
+   * 앱 실행 시도 → 성공(페이지 hidden/blur/pagehide 감지)하면 종료
+   * 실패하면 timeout 후 fallbackUrl로 이동
+   */
+  const tryOpenApp = ({
+    primaryUrl,
+    fallbackUrl,
+    timeoutMs = 1200,
+    androidOnly = true,
+  } = {}) => {
+    if (!primaryUrl) return;
+
+    if (androidOnly && !isAndroid()) {
+      if (fallbackUrl) location.href = fallbackUrl;
+      return;
+    }
+
+    let done = false;
+
+    const cleanup = () => {
+      document.removeEventListener("visibilitychange", onVis, true);
+      window.removeEventListener("pagehide", onHide, true);
+      window.removeEventListener("blur", onBlur, true);
+    };
+
+    const markSuccess = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+    };
+
+    const fallback = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      if (fallbackUrl) location.href = fallbackUrl;
+    };
+
+    const onVis = () => {
+      if (document.visibilityState === "hidden") markSuccess();
+    };
+    const onHide = () => markSuccess();
+    const onBlur = () => markSuccess();
+
+    // capture=true: 다른 핸들러와 충돌 최소화
+    document.addEventListener("visibilitychange", onVis, true);
+    window.addEventListener("pagehide", onHide, true);
+    window.addEventListener("blur", onBlur, true);
+
+    location.href = primaryUrl;
+    setTimeout(fallback, timeoutMs);
+  };
+
+  const openGoodTvBibleApp = () => {
+    tryOpenApp({
+      primaryUrl: GOODTV.intent,
+      fallbackUrl: GOODTV.play,
+      timeoutMs: 1200,
+      androidOnly: true,
+    });
+  };
+
+  // =========================================================
+  // 2) Confetti FX (site.js wrapper optional)
+  // =========================================================
+  const prefersReducedMotion = () =>
+    typeof matchMedia === "function" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const fxSmall = () => {
+    if (prefersReducedMotion()) return;
+    if (window.SiteFX?.burstSmall) return window.SiteFX.burstSmall();
+    if (typeof window.confetti === "function") {
+      try {
+        window.confetti({
+          particleCount: 60,
+          spread: 70,
+          startVelocity: 35,
+          origin: { y: 0.75 },
+        });
+      } catch (_) {}
+    }
+  };
+
+  const fxBig = () => {
+    if (prefersReducedMotion()) return;
+    if (window.SiteFX?.burstBig) return window.SiteFX.burstBig();
+    if (typeof window.confetti === "function") {
+      try {
+        window.confetti({
+          particleCount: 160,
+          spread: 110,
+          startVelocity: 55,
+          origin: { y: 0.65 },
+        });
+        setTimeout(
+          () =>
+            window.confetti({
+              particleCount: 120,
+              spread: 90,
+              startVelocity: 45,
+              origin: { y: 0.65 },
+            }),
+          180
+        );
+      } catch (_) {}
+    }
+  };
+
+  // =========================================================
+  // 3) Bible DB (bible_db.json) - Index + Loader
+  // =========================================================
+  const BIBLE_DB_URL = "/data/bible_db.json";
+  let __bibleDbPromise = null;
+  let __bibleIndex = null;
+
+  const buildBibleIndex = (rows) => {
+    const shortToBook = new Map();
+    const bookToLong = new Map();
+    const bcToVerses = new Map(); // "book:chapter" -> [{p,s}]
+
+    for (const r of rows) {
+      if (!shortToBook.has(r.short_label)) shortToBook.set(r.short_label, r.book);
+      if (!bookToLong.has(r.book)) bookToLong.set(r.book, r.long_label);
+
+      const key = `${r.book}:${r.chapter}`;
+      if (!bcToVerses.has(key)) bcToVerses.set(key, []);
+      bcToVerses.get(key).push({ p: r.paragraph, s: r.sentence });
+    }
+
+    return { shortToBook, bookToLong, bcToVerses };
+  };
+
+  const loadBibleDb = async () => {
+    if (__bibleIndex) return __bibleIndex;
+
+    if (!__bibleDbPromise) {
+      __bibleDbPromise = fetch(BIBLE_DB_URL, { cache: "force-cache" })
+        .then((r) => {
+          if (!r.ok) throw new Error(`bible_db.json 로드 실패 (${r.status})`);
+          return r.json();
+        })
+        .then((json) => {
+          const rows = Array.isArray(json?.Bible) ? json.Bible : [];
+          __bibleIndex = buildBibleIndex(rows);
+          return __bibleIndex;
+        });
+    }
+
+    return __bibleDbPromise;
+  };
+
+  // =========================================================
+  // 4) TTS (Bible Modal) - Settings + Runtime + Playback
+  // =========================================================
+  const BIBLE_TTS_KEY = "bibleRead:tts:v1";
+
   const getTTS = () =>
     safeJSON.read(BIBLE_TTS_KEY, {
       open: false,
       ratePreset: "normal", // slow|normal|fast
-      voiceURI: "",         // 사용자 선택 음성 저장
+      voiceURI: "", // 사용자 선택 음성 저장
     });
 
   const setTTS = (o) => safeJSON.write(BIBLE_TTS_KEY, o);
 
-  // ✅ runtime: 큐(청크) 재생용
+  // runtime: 큐(청크) 재생용
   const ttsRuntime = {
     playing: false,
     queue: [],
@@ -131,33 +229,12 @@ const openGoodTvBibleApp = () => {
     ttsRuntime.utter = null;
     ttsRuntime.session += 1; // 진행 중 onend 무효화
 
-    try { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); } catch (_) {}
+    try {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    } catch (_) {}
+
     qs("#bible-tts-mini-status").text("");
     qs("#bible-tts-panel-status").text("");
-  };
-
-  // ---------- Confetti helpers (site.js 래퍼가 없어도 동작) ----------
-  const prefersReducedMotion = () =>
-    typeof matchMedia === "function" &&
-    matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  const fxSmall = () => {
-    if (prefersReducedMotion()) return;
-    if (window.SiteFX?.burstSmall) return window.SiteFX.burstSmall();
-    if (typeof window.confetti === "function") {
-      try { window.confetti({ particleCount: 60, spread: 70, startVelocity: 35, origin: { y: 0.75 } }); } catch (_) {}
-    }
-  };
-
-  const fxBig = () => {
-    if (prefersReducedMotion()) return;
-    if (window.SiteFX?.burstBig) return window.SiteFX.burstBig();
-    if (typeof window.confetti === "function") {
-      try {
-        window.confetti({ particleCount: 160, spread: 110, startVelocity: 55, origin: { y: 0.65 } });
-        setTimeout(() => window.confetti({ particleCount: 120, spread: 90, startVelocity: 45, origin: { y: 0.65 } }), 180);
-      } catch (_) {}
-    }
   };
 
   const sanitizeForTTS = (text) => {
@@ -178,7 +255,11 @@ const openGoodTvBibleApp = () => {
 
   const getAllVoices = () => {
     if (!("speechSynthesis" in window)) return [];
-    try { return window.speechSynthesis.getVoices?.() || []; } catch (_) { return []; }
+    try {
+      return window.speechSynthesis.getVoices?.() || [];
+    } catch (_) {
+      return [];
+    }
   };
 
   const findGoogleKoreanVoice = (voices) => {
@@ -221,18 +302,16 @@ const openGoodTvBibleApp = () => {
     setTTS({ ...cfg, voiceURI: googleKo.voiceURI });
   };
 
-  // ✅ 긴 문장/본문을 "자연스럽게" 분리해서 큐로 (첫 청크 즉시 재생)
+  // 긴 문장/본문을 "자연스럽게" 분리해서 큐로
   const splitForTTS = (text, maxLen = 180) => {
     const t = sanitizeForTTS(text);
     if (!t) return [];
 
-    // 1) 구두점 기준 1차 분리
     const rough = t
       .split(/(?<=[\.\!\?\。\！\？…])\s+|(?<=[。])\s+|(?<=[,，;；:：])\s+|\s+(?=[-–—])/g)
       .map((s) => s.trim())
       .filter(Boolean);
 
-    // 2) 너무 긴 덩어리는 길이 기준 2차 분리 (공백 기준)
     const out = [];
     for (const part of rough.length ? rough : [t]) {
       if (part.length <= maxLen) {
@@ -269,14 +348,11 @@ const openGoodTvBibleApp = () => {
     return u;
   };
 
-  // 다이얼로그 본문을 읽기 좋은 텍스트로 합치기
   const getModalPlainTextForTTS = () => {
-    const $body = qs("#bible-modal-body");
-    const text = $body.text() || "";
+    const text = qs("#bible-modal-body").text() || "";
     return sanitizeForTTS(text);
   };
 
-  // ✅ 큐 재생 (첫 청크 즉시 speak -> “바로 재생” 체감)
   const startBibleTTS = () => {
     ensureDefaultGoogleVoiceSavedIfAvailable();
     const cfg = getTTS();
@@ -291,7 +367,6 @@ const openGoodTvBibleApp = () => {
       return;
     }
 
-    // 기존 재생 정리 후 새 세션 시작
     stopTTS();
     const mySession = ttsRuntime.session;
 
@@ -308,12 +383,14 @@ const openGoodTvBibleApp = () => {
     qs("#bible-tts-mini-status").text("재생 중…");
     qs("#bible-tts-panel-status").text(`재생 중… (1/${queue.length})`);
 
-    // 일부 환경 안정성
-    try { window.speechSynthesis.cancel(); } catch (_) {}
+    try {
+      window.speechSynthesis.cancel();
+    } catch (_) {}
 
     const playNext = () => {
       if (!ttsRuntime.playing) return;
       if (ttsRuntime.session !== mySession) return;
+
       if (ttsRuntime.idx >= ttsRuntime.queue.length) {
         ttsRuntime.playing = false;
         qs("#bible-tts-mini-status").text("");
@@ -321,13 +398,16 @@ const openGoodTvBibleApp = () => {
         return;
       }
 
-      qs("#bible-tts-panel-status").text(`재생 중… (${ttsRuntime.idx + 1}/${queue.length})`);
+      qs("#bible-tts-panel-status").text(
+        `재생 중… (${ttsRuntime.idx + 1}/${queue.length})`
+      );
 
       const u = speakChunk(ttsRuntime.queue[ttsRuntime.idx], cfg);
       if (!u) {
         stopTTS();
         return;
       }
+
       ttsRuntime.utter = u;
 
       u.onend = () => {
@@ -339,26 +419,17 @@ const openGoodTvBibleApp = () => {
       u.onerror = () => stopTTS();
     };
 
-    playNext(); // ✅ 첫 청크 즉시
+    playNext(); // 첫 청크 즉시
   };
 
-  // ---------- Helpers ----------
-  const escapeHTML = (s) =>
-    String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-
-  const escapeAttr = (s) => escapeHTML(s).replaceAll("`", "&#96;");
-
-  // ✅ "에9,10" / "눅1:1-38" / "시119:1-24" / "창9-10" 지원
+  // =========================================================
+  // 5) Bible Token Parser + Modal Renderer
+  // =========================================================
+  // "에9,10" / "눅1:1-38" / "시119:1-24" / "창9-10" 지원
   const parseReadingToken = (token) => {
     const raw = String(token || "").trim();
     if (!raw) return null;
 
-    // 1) 책 약어 + 나머지
     const m = raw.match(/^([가-힣]+)\s*(.+)$/);
     if (!m) return null;
 
@@ -366,16 +437,12 @@ const openGoodTvBibleApp = () => {
     const rest = m[2].trim();
     if (!rest) return null;
 
-    // 2) 쉼표로 여러 구간 분리 (에9,10 / 시52,53,54)
     const segs = rest.split(/\s*,\s*/).filter(Boolean);
     if (!segs.length) return null;
 
     const parts = [];
 
     for (const seg of segs) {
-      // seg 예: "1", "9-10", "1:1-38", "119:1-24"
-
-      // (A) 절 포함: ch:vStart-vEnd
       if (seg.includes(":")) {
         const mm = seg.match(/^(\d+)\s*:\s*(\d+)(?:\s*-\s*(\d+))?$/);
         if (!mm) return null;
@@ -383,6 +450,7 @@ const openGoodTvBibleApp = () => {
         const vStart = Number(mm[2]);
         const vEnd = mm[3] ? Number(mm[3]) : vStart;
         if (![ch, vStart, vEnd].every(Number.isFinite)) return null;
+
         parts.push({
           chStart: ch,
           chEnd: ch,
@@ -392,59 +460,32 @@ const openGoodTvBibleApp = () => {
         continue;
       }
 
-      // (B) 장만: chStart-chEnd
       const mm = seg.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
       if (!mm) return null;
       const chStart = Number(mm[1]);
       const chEnd = mm[2] ? Number(mm[2]) : chStart;
       if (![chStart, chEnd].every(Number.isFinite)) return null;
+
       parts.push({
         chStart: Math.min(chStart, chEnd),
         chEnd: Math.max(chStart, chEnd),
       });
     }
 
-    // 정렬(표기 안정화)
-    parts.sort((a, b) => (a.chStart - b.chStart) || ((a.vStart ?? 0) - (b.vStart ?? 0)));
+    parts.sort(
+      (a, b) => a.chStart - b.chStart || (a.vStart ?? 0) - (b.vStart ?? 0)
+    );
 
     return { short, parts };
-  };
-
-  const buildBibleIndex = (rows) => {
-    const shortToBook = new Map();
-    const bookToLong = new Map();
-    const bcToVerses = new Map(); // "book:chapter" -> [{p,s}]
-    for (const r of rows) {
-      if (!shortToBook.has(r.short_label)) shortToBook.set(r.short_label, r.book);
-      if (!bookToLong.has(r.book)) bookToLong.set(r.book, r.long_label);
-      const key = `${r.book}:${r.chapter}`;
-      if (!bcToVerses.has(key)) bcToVerses.set(key, []);
-      bcToVerses.get(key).push({ p: r.paragraph, s: r.sentence });
-    }
-    return { shortToBook, bookToLong, bcToVerses };
-  };
-
-  const loadBibleDb = async () => {
-    if (__bibleIndex) return __bibleIndex;
-    if (!__bibleDbPromise) {
-      __bibleDbPromise = fetch(BIBLE_DB_URL, { cache: "force-cache" })
-        .then((r) => {
-          if (!r.ok) throw new Error(`bible_db.json 로드 실패 (${r.status})`);
-          return r.json();
-        })
-        .then((json) => {
-          const rows = Array.isArray(json?.Bible) ? json.Bible : [];
-          __bibleIndex = buildBibleIndex(rows);
-          return __bibleIndex;
-        });
-    }
-    return __bibleDbPromise;
   };
 
   const renderReadingsHTML = (readings) => {
     return readings
       .map((t, i) => {
-        const sep = i < readings.length - 1 ? ` <span class="text-gray-300">·</span> ` : "";
+        const sep =
+          i < readings.length - 1
+            ? ` <span class="text-gray-300">·</span> `
+            : "";
         return `
           <button type="button"
             class="reading-ref inline-flex items-center px-2 py-1 rounded-lg bg-blue-50 text-blue-800 font-semibold hover:bg-blue-100 active:scale-[0.99]"
@@ -456,14 +497,20 @@ const openGoodTvBibleApp = () => {
       .join("");
   };
 
+  const closeBibleModal = () => {
+    stopTTS();
+    qs("#bible-modal").addClass("hidden");
+    window.SiteOverlay?.close("bible-modal");
+  };
+
   const openBibleModal = async (token) => {
     stopTTS();
 
     const parsed = parseReadingToken(token);
+
     qs("#bible-modal").removeClass("hidden");
     qs("#bible-modal-title").text(token || "성경");
     qs("#bible-modal-subtitle").text("");
-
     window.SiteOverlay?.open("bible-modal", closeBibleModal);
 
     const $body = qs("#bible-modal-body");
@@ -471,28 +518,41 @@ const openGoodTvBibleApp = () => {
 
     if (!parsed) {
       qs("#bible-modal-subtitle").text("지원되지 않는 표기");
-      $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(token)}" 표기는 아직 지원하지 않아요.</div>`);
+      $body.html(
+        `<div class="text-sm text-gray-600">"${escapeHTML(
+          token
+        )}" 표기는 아직 지원하지 않아요.</div>`
+      );
       return;
     }
 
     try {
       const idx = await loadBibleDb();
       const bookNum = idx.shortToBook.get(parsed.short);
+
       if (!bookNum) {
         qs("#bible-modal-subtitle").text("책을 찾을 수 없음");
-        $body.html(`<div class="text-sm text-gray-600">"${escapeHTML(parsed.short)}" 약어를 성경DB에서 찾지 못했어요.</div>`);
+        $body.html(
+          `<div class="text-sm text-gray-600">"${escapeHTML(
+            parsed.short
+          )}" 약어를 성경DB에서 찾지 못했어요.</div>`
+        );
         return;
       }
 
       const longLabel = idx.bookToLong.get(bookNum) || parsed.short;
 
-      // ✅ subtitle용 표기 정리
+      // subtitle 표기
       const labelParts = parsed.parts.map((p) => {
-        const ch = p.chStart === p.chEnd ? `${p.chStart}` : `${p.chStart}-${p.chEnd}`;
+        const ch =
+          p.chStart === p.chEnd ? `${p.chStart}` : `${p.chStart}-${p.chEnd}`;
         if (p.vStart != null) return `${p.chStart}:${p.vStart}-${p.vEnd}`;
         return ch;
       });
-      qs("#bible-modal-subtitle").text(`${escapeHTML(longLabel)} ${escapeHTML(labelParts.join(", "))}`);
+
+      qs("#bible-modal-subtitle").text(
+        `${longLabel} ${labelParts.join(", ")}`
+      );
 
       let html = "";
 
@@ -500,7 +560,6 @@ const openGoodTvBibleApp = () => {
         for (let ch = part.chStart; ch <= part.chEnd; ch++) {
           let verses = idx.bcToVerses.get(`${bookNum}:${ch}`) || [];
 
-          // ✅ 절 범위가 있으면 paragraph(=절) 기준으로 필터링
           if (part.vStart != null && part.chStart === part.chEnd) {
             verses = verses.filter((v) => {
               const n = Number(v.p);
@@ -510,7 +569,9 @@ const openGoodTvBibleApp = () => {
 
           html += `
             <div class="mb-5">
-              <div class="font-extrabold text-gray-900">${escapeHTML(longLabel)} ${ch}장</div>
+              <div class="font-extrabold text-gray-900 dark:text-gray-100">${escapeHTML(
+                longLabel
+              )} ${ch}장</div>
               <div class="mt-2 space-y-2">
                 ${
                   verses.length
@@ -518,8 +579,12 @@ const openGoodTvBibleApp = () => {
                         .map(
                           (v) => `
                             <div class="flex gap-2">
-                              <div class="shrink-0 w-7 text-right text-xs text-gray-400 pt-[2px]">${escapeHTML(v.p)}</div>
-                              <div class="text-gray-900">${escapeHTML(v.s)}</div>
+                              <div class="shrink-0 w-7 text-right text-xs text-gray-400 pt-[2px]">${escapeHTML(
+                                v.p
+                              )}</div>
+                              <div class="text-gray-900 dark:text-gray-100">${escapeHTML(
+                                v.s
+                              )}</div>
                             </div>
                           `
                         )
@@ -538,22 +603,18 @@ const openGoodTvBibleApp = () => {
       renderBibleTTSUI();
     } catch (e) {
       qs("#bible-modal-subtitle").text("로드 오류");
-      $body.html(`<div class="text-sm text-red-600">본문을 불러오지 못했어요. (오프라인이거나 파일 경로를 확인해 주세요)</div>`);
+      $body.html(
+        `<div class="text-sm text-red-600">본문을 불러오지 못했어요. (오프라인이거나 파일 경로를 확인해 주세요)</div>`
+      );
       console.error(e);
     }
   };
 
-  const closeBibleModal = () => {
-    stopTTS();
-    qs("#bible-modal").addClass("hidden");
-    window.SiteOverlay?.close("bible-modal");
-  };
-
-  // ---------- Reading plan / progress ----------
+  // =========================================================
+  // 6) Progress / Options / Plan
+  // =========================================================
   const STORAGE_KEY = "bibleRead:progress:v2";
   const OPT_KEY = "bibleRead:options:v1";
-
-  const nowIso = () => new Date().toISOString();
 
   const loadProgress = () => {
     try {
@@ -571,7 +632,8 @@ const openGoodTvBibleApp = () => {
     return p;
   };
 
-  const countDone = (completedMap) => Object.values(completedMap || {}).filter(Boolean).length;
+  const countDone = (completedMap) =>
+    Object.values(completedMap || {}).filter(Boolean).length;
 
   const loadOptions = () => {
     try {
@@ -580,7 +642,9 @@ const openGoodTvBibleApp = () => {
     } catch {}
     return { autoNextAfterDoneToday: false };
   };
-  const saveOptions = (opt) => localStorage.setItem(OPT_KEY, JSON.stringify(opt));
+
+  const saveOptions = (opt) =>
+    localStorage.setItem(OPT_KEY, JSON.stringify(opt));
 
   const getQueryDay = () => {
     const u = new URL(location.href);
@@ -606,25 +670,31 @@ const openGoodTvBibleApp = () => {
     return (raw || []).map((row, i) => {
       const day = Number(row.day ?? row.Day ?? (i + 1));
       const date = row.date ?? row.Date ?? row.mmdd ?? row.MMDD ?? "";
-      const readings = row.readings ?? row.Readings ?? row.reading ?? row.Reading ?? [];
+      const readings =
+        row.readings ?? row.Readings ?? row.reading ?? row.Reading ?? [];
       let month = row.month;
       let dayOfMonth = row.dayOfMonth;
 
-      if ((!month || !dayOfMonth) && typeof date === "string" && /^\d{2}-\d{2}$/.test(date)) {
+      if (
+        (!month || !dayOfMonth) &&
+        typeof date === "string" &&
+        /^\d{2}-\d{2}$/.test(date)
+      ) {
         const [mm, dd] = date.split("-").map(Number);
         month = mm;
         dayOfMonth = dd;
       }
+
       return { ...row, day, date, month, dayOfMonth, readings };
     });
   };
 
   const renderFatal = (msg, extra = "") => {
     qs("#main-card").html(`
-      <div class="bg-white rounded-2xl shadow p-5">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 border border-gray-100 dark:border-gray-700">
         <div class="text-red-600 font-extrabold">데이터 로딩 오류</div>
-        <div class="mt-2 text-gray-800 font-semibold">${msg}</div>
-        ${extra ? `<div class="mt-3 text-sm text-gray-500">${extra}</div>` : ""}
+        <div class="mt-2 text-gray-800 dark:text-gray-100 font-semibold">${escapeHTML(msg)}</div>
+        ${extra ? `<div class="mt-3 text-sm text-gray-500 dark:text-gray-300">${escapeHTML(extra)}</div>` : ""}
       </div>
     `);
   };
@@ -648,12 +718,11 @@ const openGoodTvBibleApp = () => {
     return doneCount >= days;
   };
 
-  // ✅ A안: 완독이면 자동으로 다음 독으로 넘기기 (옵션 무관)
+  // 완독이면 자동 다음 독
   const advanceCycleIfFinished = (p, cycle, days) => {
     ensureCycle(p, cycle);
     const k = String(cycle);
 
-    // finishedAt 보정
     const doneCount = countDone(p.cycles[k]?.completed);
     if (doneCount >= days && !p.cycles[k].finishedAt) p.cycles[k].finishedAt = nowIso();
     if (doneCount < days) p.cycles[k].finishedAt = null;
@@ -667,7 +736,6 @@ const openGoodTvBibleApp = () => {
     return next;
   };
 
-  // ✅ A안: "사용자가 봐야할 day" 자동 선택
   const pickAutoDay = (p, cycle, todayDay, days) => {
     ensureCycle(p, cycle);
     const doneToday = !!p.cycles[String(cycle)]?.completed?.[String(todayDay)];
@@ -675,6 +743,9 @@ const openGoodTvBibleApp = () => {
     return findNextUndoneDay(p, cycle, todayDay, days);
   };
 
+  // =========================================================
+  // 7) UI Render (Main / Header / Progress / Nav)
+  // =========================================================
   const renderMainCard = (state) => {
     const { PLAN, selectedDay, cycle, days } = state;
 
@@ -687,12 +758,9 @@ const openGoodTvBibleApp = () => {
     const hasReadings = Array.isArray(readings) && readings.length > 0;
 
     qs("#main-card").html(`
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5
-                  border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-5 border border-gray-100 dark:border-gray-700">
         <div class="inline-flex items-center gap-2">
-          <span class="text-xs px-2 py-1 rounded-full
-                      bg-blue-50 text-blue-700
-                      dark:bg-blue-900/40 dark:text-blue-100">
+          <span class="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-100">
             ${cycle}독
           </span>
           <span class="text-xs text-gray-500 dark:text-gray-300">
@@ -700,10 +768,12 @@ const openGoodTvBibleApp = () => {
           </span>
         </div>
 
-        <div class="mt-3 text-[17px] leading-relaxed break-words
-                    text-gray-900 dark:text-gray-100
-                    flex flex-wrap gap-2 gap-y-4">
-          ${hasReadings ? renderReadingsHTML(readings) : `<span class="text-gray-500 dark:text-gray-300">(데이터 준비중)</span>`}
+        <div class="mt-3 text-[17px] leading-relaxed break-words text-gray-900 dark:text-gray-100 flex flex-wrap gap-2 gap-y-4">
+          ${
+            hasReadings
+              ? renderReadingsHTML(readings)
+              : `<span class="text-gray-500 dark:text-gray-300">(데이터 준비중)</span>`
+          }
         </div>
 
         <button id="done-btn"
@@ -711,60 +781,56 @@ const openGoodTvBibleApp = () => {
           ${done ? "bg-green-600" : "bg-blue-600"}">
           ${done ? "완료됨 ✓ (다시 누르면 해제)" : "읽었어요 :)"}
         </button>
-
-        <div class="mt-3 text-[11px] text-gray-400 dark:text-gray-500 break-all hidden">
-          day=${selectedDay} · readings=${Array.isArray(readings) ? readings.length : "NA"}
-        </div>
       </div>
     `);
 
+    qs("#done-btn")
+      .off("click")
+      .on("click", () => {
+        const p2 = loadProgress();
+        ensureCycle(p2, cycle);
 
-    qs("#done-btn").off("click").on("click", () => {
-      const p2 = loadProgress();
-      ensureCycle(p2, cycle);
+        const wasDone = !!p2.cycles[String(cycle)].completed[String(selectedDay)];
+        const nowDone = !wasDone;
 
-      const wasDone = !!p2.cycles[String(cycle)].completed[String(selectedDay)];
-      const nowDone = !wasDone;
+        p2.cycles[String(cycle)].completed[String(selectedDay)] = nowDone;
 
-      // toggle
-      p2.cycles[String(cycle)].completed[String(selectedDay)] = nowDone;
+        if (p2.cycles[String(cycle)].startedAt === null)
+          p2.cycles[String(cycle)].startedAt = nowIso();
 
-      if (p2.cycles[String(cycle)].startedAt === null) p2.cycles[String(cycle)].startedAt = nowIso();
+        const doneCount = countDone(p2.cycles[String(cycle)].completed);
+        if (doneCount >= days) p2.cycles[String(cycle)].finishedAt = nowIso();
+        else p2.cycles[String(cycle)].finishedAt = null;
 
-      const doneCount = countDone(p2.cycles[String(cycle)].completed);
-      if (doneCount >= days) p2.cycles[String(cycle)].finishedAt = nowIso();
-      else p2.cycles[String(cycle)].finishedAt = null;
+        saveProgress(p2);
 
-      saveProgress(p2);
+        // 7독 단위 축하
+        if (nowDone && doneCount % 7 === 0) fxSmall();
 
-      // ✅ 체크 ON 축하(작게)
-      //if (nowDone) fxSmall();
-      if (nowDone && doneCount % 7 === 0) fxSmall();
+        // 완독 시
+        if (nowDone && doneCount >= days) {
+          fxBig();
 
-      // ✅ A안: 완독이면 즉시 다음 독으로 자동 전환(큰 축하)
-      if (nowDone && doneCount >= days) {
-        fxBig();
+          const nextCycle = advanceCycleIfFinished(p2, cycle, days);
+          state.cycle = nextCycle;
 
-        const nextCycle = advanceCycleIfFinished(p2, cycle, days);
-        state.cycle = nextCycle;
+          const p3 = loadProgress();
+          ensureCycle(p3, state.cycle);
 
-        const p3 = loadProgress();
-        ensureCycle(p3, state.cycle);
+          const nextDay = pickAutoDay(p3, state.cycle, state.todayDay, days);
+          state.setSelectedDay(nextDay);
+          return;
+        }
 
-        const nextDay = pickAutoDay(p3, state.cycle, state.todayDay, days);
-        state.setSelectedDay(nextDay);
-        return;
-      }
+        // 옵션: 오늘 완료 후 다음 자동 진행
+        const opt = loadOptions();
+        if (opt.autoNextAfterDoneToday && selectedDay === state.todayDay && nowDone) {
+          state.setSelectedDay(findNextUndoneDay(p2, cycle, state.todayDay, days));
+          return;
+        }
 
-      // (옵션 유지) 오늘 완료 후 다음 자동 진행
-      const opt = loadOptions();
-      if (opt.autoNextAfterDoneToday && selectedDay === state.todayDay && nowDone) {
-        state.setSelectedDay(findNextUndoneDay(p2, cycle, state.todayDay, days));
-        return;
-      }
-
-      render(state);
-    });
+        render(state);
+      });
   };
 
   const renderProgress = (state) => {
@@ -777,26 +843,38 @@ const openGoodTvBibleApp = () => {
   };
 
   const renderHeader = (state) => {
-    const { selectedDay } = state;
+    // #share-btn가 없을 수도 있어서 가드
+    const $share = qs("#share-btn");
+    if ($share.length) {
+      $share.off("click").on("click", async () => {
+        const url = new URL(location.href);
+        url.searchParams.set("day", String(state.selectedDay));
+        const shareData = {
+          title: "나의신앙생활 · 365일 일독",
+          text: "오늘 분량을 확인해요",
+          url: url.toString(),
+        };
+        try {
+          if (navigator.share) await navigator.share(shareData);
+          else {
+            await navigator.clipboard.writeText(url.toString());
+            alert("링크를 복사했어요!");
+          }
+        } catch {}
+      });
+    }
 
-    qs("#share-btn").off("click").on("click", async () => {
-      const url = new URL(location.href);
-      url.searchParams.set("day", String(selectedDay));
-      const shareData = { title: "나의신앙생활 · 365일 일독", text: "오늘 분량을 확인해요", url: url.toString() };
-      try {
-        if (navigator.share) await navigator.share(shareData);
-        else {
-          await navigator.clipboard.writeText(url.toString());
-          alert("링크를 복사했어요!");
-        }
-      } catch {}
-    });
+    qs("#go-home")
+      .off("click")
+      .on("click", () => {
+        stopTTS();
+        location.assign("/");
+      });
+  };
 
-    // ✅ 홈 이동 전 TTS 종료
-    qs("#go-home").off("click").on("click", () => {
-      stopTTS();
-      location.assign("/");
-    });
+  const updateNavButtons = (state) => {
+    qs("#prev-btn").toggleClass("invisible pointer-events-none", state.selectedDay <= DAY_MIN);
+    qs("#next-btn").toggleClass("invisible pointer-events-none", state.selectedDay >= state.days);
   };
 
   const initBottomNav = (state) => {
@@ -804,29 +882,28 @@ const openGoodTvBibleApp = () => {
       if (state.selectedDay <= DAY_MIN) return;
       state.setSelectedDay(state.selectedDay - 1);
     });
+
     qs("#next-btn").off("click").on("click", () => {
       if (state.selectedDay >= state.days) return;
       state.setSelectedDay(state.selectedDay + 1);
     });
+
     qs("#today-btn").off("click").on("click", () => state.setSelectedDay(state.todayDay));
   };
 
   const initOptions = () => {
     const opt = loadOptions();
     qs("#opt-auto-next").prop("checked", !!opt.autoNextAfterDoneToday);
+
     qs("#opt-auto-next").off("change").on("change", (e) => {
       const next = { ...loadOptions(), autoNextAfterDoneToday: !!e.target.checked };
       saveOptions(next);
     });
   };
 
-  const bindOpenBibleAppBtn = () => {
-    qs("#open-bible-app").off("click").on("click", (e) => {
-      e.preventDefault();
-      openGoodTvBibleApp();
-    });
-  };  
-  // ---------- Bible TTS UI render/bind ----------
+  // =========================================================
+  // 8) Bible TTS UI (Render + Bind)
+  // =========================================================
   const renderBibleTTSUI = () => {
     const cfg = getTTS();
 
@@ -851,7 +928,9 @@ const openGoodTvBibleApp = () => {
         koVoices
           .map((v) => {
             const selected = v.voiceURI === curVal ? "selected" : "";
-            return `<option value="${escapeAttr(v.voiceURI)}" ${selected}>${escapeHTML(v.name || "Korean Voice")} (${escapeHTML(v.lang)})</option>`;
+            return `<option value="${escapeAttr(v.voiceURI)}" ${selected}>${escapeHTML(
+              v.name || "Korean Voice"
+            )} (${escapeHTML(v.lang)})</option>`;
           })
           .join("");
       $sel.html(opts);
@@ -859,11 +938,20 @@ const openGoodTvBibleApp = () => {
 
     if (ttsRuntime.playing) {
       qs("#bible-tts-mini-status").text("재생 중…");
-      qs("#bible-tts-panel-status").text(`재생 중… (${ttsRuntime.idx + 1}/${ttsRuntime.queue.length || 1})`);
+      qs("#bible-tts-panel-status").text(
+        `재생 중… (${ttsRuntime.idx + 1}/${ttsRuntime.queue.length || 1})`
+      );
     } else {
       qs("#bible-tts-mini-status").text("");
       qs("#bible-tts-panel-status").text("");
     }
+  };
+
+  const bindOpenBibleAppBtn = () => {
+    qs("#open-bible-app").off("click").on("click", (e) => {
+      e.preventDefault();
+      openGoodTvBibleApp();
+    });
   };
 
   const bindBibleTTSEvents = () => {
@@ -873,12 +961,14 @@ const openGoodTvBibleApp = () => {
       renderBibleTTSUI();
     });
 
-    $(document).off("click.bibleRate").on("click.bibleRate", ".bible-rate-btn", function () {
-      const preset = $(this).data("rate");
-      const cur = getTTS();
-      setTTS({ ...cur, ratePreset: preset });
-      renderBibleTTSUI();
-    });
+    $(document)
+      .off("click.bibleRate")
+      .on("click.bibleRate", ".bible-rate-btn", function () {
+        const preset = $(this).data("rate");
+        const cur = getTTS();
+        setTTS({ ...cur, ratePreset: preset });
+        renderBibleTTSUI();
+      });
 
     qs("#bible-tts-voice").off("change").on("change", function () {
       const cur = getTTS();
@@ -901,12 +991,16 @@ const openGoodTvBibleApp = () => {
       renderBibleTTSUI();
     });
 
-    // ✅ 탭 숨김 / 페이지 이탈 / 뒤로가기 포함 종료
-    $(document).off("visibilitychange.bibleTTS").on("visibilitychange.bibleTTS", () => {
-      if (document.hidden) stopTTS();
-    });
+    // 탭 숨김 / 페이지 이탈 / 뒤로가기 포함 종료
+    $(document)
+      .off("visibilitychange.bibleTTS")
+      .on("visibilitychange.bibleTTS", () => {
+        if (document.hidden) stopTTS();
+      });
 
-    $(window).off("beforeunload.bibleTTS").on("beforeunload.bibleTTS", () => stopTTS());
+    $(window)
+      .off("beforeunload.bibleTTS")
+      .on("beforeunload.bibleTTS", () => stopTTS());
 
     window.removeEventListener("pagehide", stopTTS, true);
     window.addEventListener("pagehide", stopTTS, true);
@@ -914,20 +1008,22 @@ const openGoodTvBibleApp = () => {
     window.removeEventListener("popstate", stopTTS, true);
     window.addEventListener("popstate", stopTTS, true);
 
-    $(document).off("click.bibleClose").on("click.bibleClose", "[data-bible-close]", () => closeBibleModal());
-    $(document).off("keydown.bibleEsc").on("keydown.bibleEsc", (ev) => {
-      if (ev.key === "Escape") closeBibleModal();
-    });
+    $(document)
+      .off("click.bibleClose")
+      .on("click.bibleClose", "[data-bible-close]", () => closeBibleModal());
+
+    $(document)
+      .off("keydown.bibleEsc")
+      .on("keydown.bibleEsc", (ev) => {
+        if (ev.key === "Escape") closeBibleModal();
+      });
 
     bindOpenBibleAppBtn();
   };
 
-  const updateNavButtons = (state) => {
-    qs("#prev-btn").toggleClass("invisible pointer-events-none", state.selectedDay <= DAY_MIN);
-    qs("#next-btn").toggleClass("invisible pointer-events-none", state.selectedDay >= state.days);
-  };
-
-  // ---------- Main render ----------
+  // =========================================================
+  // 9) Main Render
+  // =========================================================
   const render = (state) => {
     renderHeader(state);
     renderMainCard(state);
@@ -935,7 +1031,9 @@ const openGoodTvBibleApp = () => {
     renderProgress(state);
   };
 
-  // ---------- Boot ----------
+  // =========================================================
+  // 10) Boot
+  // =========================================================
   (async () => {
     try {
       const RAW = await fetch("./data.json", { cache: "no-cache" }).then((r) => r.json());
@@ -946,6 +1044,7 @@ const openGoodTvBibleApp = () => {
         return;
       }
 
+      // voices preload + default google voice
       if ("speechSynthesis" in window) {
         try {
           window.speechSynthesis.getVoices();
@@ -962,7 +1061,7 @@ const openGoodTvBibleApp = () => {
       const p = loadProgress();
       ensureCycle(p, p.activeCycle);
 
-      // ✅ A안: 이미 완독 상태로 들어오면 자동으로 다음 독으로 넘김
+      // 이미 완독 상태면 자동 다음 독
       if (isCycleFinished(p, p.activeCycle, days)) {
         p.activeCycle = advanceCycleIfFinished(p, p.activeCycle, days);
       } else {
@@ -974,7 +1073,7 @@ const openGoodTvBibleApp = () => {
       const queryDay = getQueryDay();
       const opt = loadOptions();
 
-      // ✅ 초기 day 선택 (A안: 기본은 "오늘(미완료)" -> "가까운 미완료")
+      // 초기 day 선택: 기본은 "오늘(미완료)" -> "가까운 미완료"
       let initialDay;
       if (queryDay != null) {
         initialDay = clamp(queryDay, DAY_MIN, days);
@@ -985,7 +1084,7 @@ const openGoodTvBibleApp = () => {
 
         initialDay = pickAutoDay(p2, cycle, todayDay, days);
 
-        // (옵션 유지) 오늘 완료 후 다음 자동 진행이 켜져있다면, 오늘이 완료인 경우 next로
+        // 옵션: 오늘 완료 후 다음 자동 진행이 켜져있다면 today가 완료일 때 next
         if (opt.autoNextAfterDoneToday) {
           const doneToday = !!p2.cycles[String(cycle)]?.completed?.[String(todayDay)];
           if (doneToday) initialDay = findNextUndoneDay(p2, cycle, todayDay, days);
@@ -1009,11 +1108,14 @@ const openGoodTvBibleApp = () => {
       initBottomNav(state);
       render(state);
 
-      $(document).off("click.bibleRef").on("click.bibleRef", ".reading-ref", async (e) => {
-        const ref = $(e.currentTarget).data("ref");
-        if (!ref) return;
-        openBibleModal(ref);
-      });
+      // ref 클릭 -> 성경 모달 오픈
+      $(document)
+        .off("click.bibleRef")
+        .on("click.bibleRef", ".reading-ref", async (e) => {
+          const ref = $(e.currentTarget).data("ref");
+          if (!ref) return;
+          openBibleModal(ref);
+        });
 
       bindBibleTTSEvents();
 
