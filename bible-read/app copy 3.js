@@ -50,15 +50,6 @@
   // =========================================================
   // 2) GOODTV Audio Panel - 자체 컨트롤
   // =========================================================
-  const BIBLE_AUDIO_KEY = "bibleRead:audio:v1";
-
-  const getAUDIO = () =>
-    safeJSON.read(BIBLE_AUDIO_KEY, {
-      open: false,
-    });
-
-  const setAUDIO = (o) => safeJSON.write(BIBLE_AUDIO_KEY, o);
-
   const goodtvAudio = {
     el: null,
     playing: false,
@@ -120,22 +111,13 @@
     qs("#goodtv-duration").text("0:00");
   };
 
-  // =========================================================
-  // 2.1) "패널은 유지, 상태만 초기화" (Day 변경 / 구절 변경 공통)
-  // =========================================================
-  const resetGoodtvStateKeepPanel = () => {
-    // ✅ 패널 hidden 토글은 건드리지 않음
+  // Day 변경 시 GOODTV 패널/컨트롤 초기화 (재생/큐/표시 모두 리셋)
+  const resetGoodtvForDayChange = () => {
     try {
       stopGoodtvDayQueue();
     } catch (_) {}
     try {
       stopGoodtvAudio();
-    } catch (_) {}
-
-    const a = ensureGoodtvAudio();
-    try {
-      a.removeAttribute("src"); // ✅ 잔상 방지
-      a.load();
     } catch (_) {}
 
     goodtvAudio.lastUrl = null;
@@ -144,12 +126,11 @@
     // 표시 초기화
     setGoodtvPanelText("GOOD TV 원음", "");
     qs("#goodtv-day-status").text("");
-    qs("#goodtv-day-label").addClass("hidden");
-  };
+    qs("#goodtv-day-queue").text("").addClass("hidden");
 
-  // Day 변경 시 GOODTV 패널/컨트롤 초기화 (패널은 유지)
-  const resetGoodtvForDayChange = () => {
-    resetGoodtvStateKeepPanel(); // ✅
+    // 네비 버튼도 초기 상태로 (존재한다면)
+    qs("#goodtv-prev").addClass("hidden");
+    qs("#goodtv-next").addClass("hidden");
   };
 
   const getGoodtvUrlFromCtx = () => {
@@ -158,10 +139,7 @@
     return buildGoodTvBibleAudioUrl(ctx.bookNum, ctx.chapter);
   };
 
-  const loadGoodtvFromCtx = async ({
-    autoplay = false,
-    preserve = false,
-  } = {}) => {
+  const loadGoodtvFromCtx = async ({ autoplay = false, preserve = false } = {}) => {
     const ctx = currentBibleCtx;
     if (!ctx) {
       alert("성경을 먼저 선택해 주세요.");
@@ -206,9 +184,7 @@
       goodtvAudio.playing = false;
       setGoodtvPlayBtn(false);
     }
-    try {
-      window.__goodtvUpdateNav && window.__goodtvUpdateNav();
-    } catch (_) {}
+     try { window.__goodtvUpdateNav && window.__goodtvUpdateNav(); } catch (_) {}
   };
 
   const toggleGoodtvPanel = async () => {
@@ -216,10 +192,6 @@
     if (!$panel.length) return;
 
     const willOpen = $panel.hasClass("hidden");
-
-    const cur = getAUDIO();
-    setAUDIO({ ...cur, open: willOpen });
-
     if (willOpen) {
       $panel.removeClass("hidden");
       await loadGoodtvFromCtx({ autoplay: false, preserve: true }); // 열 때는 준비만 (재생 유지)
@@ -266,6 +238,59 @@
       return navCache.queue;
     };
 
+    const updatePrevNextVisibility = async () => {
+      const $prev = qs("#goodtv-prev");
+      const $next = qs("#goodtv-next");
+
+      const q = await getNavQueue();
+      if (!currentBibleCtx || !q.length) {
+        $prev.addClass("hidden");
+        $next.addClass("hidden");
+        return;
+      }
+
+      const idx = q.findIndex(
+        (x) => Number(x.bookNum) === Number(currentBibleCtx.bookNum) && Number(x.chapter) === Number(currentBibleCtx.chapter)
+      );
+
+      if (idx < 0) {
+        // 현재 위치가 '선택한 Day 읽기표'에 없으면 네비게이션 숨김
+        $prev.addClass("hidden");
+        $next.addClass("hidden");
+        return;
+      }
+
+      $prev.toggleClass("hidden", idx <= 0);
+      $next.toggleClass("hidden", idx >= q.length - 1);
+    };
+
+    const jumpByQueue = async (dir) => {
+      if (!currentBibleCtx) return;
+
+      const q = await getNavQueue();
+      const idx = q.findIndex(
+        (x) => Number(x.bookNum) === Number(currentBibleCtx.bookNum) && Number(x.chapter) === Number(currentBibleCtx.chapter)
+      );
+      if (idx < 0) return;
+
+      const next = q[idx + dir];
+      if (!next) return;
+
+      stopGoodtvDayQueue(); // ✅ 수동 이동 시 큐모드 해제
+      currentBibleCtx = { bookNum: next.bookNum, chapter: next.chapter };
+      await loadGoodtvFromCtx({ autoplay: true });
+      await updatePrevNextVisibility();
+    };
+
+    qs("#goodtv-prev").off("click").on("click", () => jumpByQueue(-1));
+    qs("#goodtv-next").off("click").on("click", () => jumpByQueue(+1));
+
+    // 다른 이벤트(본문 클릭 등)에서도 갱신할 수 있도록 콜백 노출
+    window.__goodtvUpdateNav = updatePrevNextVisibility;
+
+    // 처음 바인딩 시 버튼 상태 반영
+    updatePrevNextVisibility();
+
     // timeupdate -> 진행바
     a.addEventListener("timeupdate", () => {
       const cur = a.currentTime || 0;
@@ -296,63 +321,6 @@
   };
 
   // =========================================================
-  // 2.2) "전체 듣기" 중 본문(#bible-modal-body) 동기화
-  // =========================================================
-  const renderBibleModalForChapter = async ({
-    bookNum,
-    chapter,
-    titleText,
-  }) => {
-    // 모달이 열려있을 때만 동기화
-    const $modal = qs("#bible-modal");
-    if (!$modal.length || $modal.hasClass("hidden")) return;
-
-    try {
-      const idx = await loadBibleDb();
-      const longLabel = idx.bookToLong.get(bookNum) || `${bookNum}권`;
-      const shortLabel = idx.bookToShort?.get(bookNum) || longLabel.slice(0, 1);
-
-      qs("#bible-modal-title").text(titleText || `${shortLabel}${chapter}`);
-      qs("#bible-modal-subtitle").text(`${longLabel} ${chapter}장`);
-
-      const $body = qs("#bible-modal-body");
-      let verses = idx.bcToVerses.get(`${bookNum}:${chapter}`) || [];
-
-      const html = `
-        <div class="mb-5">
-          <div class="font-extrabold text-gray-900 dark:text-gray-100">${escapeHTML(
-            longLabel
-          )} ${chapter}장</div>
-          <div class="mt-2 space-y-2">
-            ${
-              verses.length
-                ? verses
-                    .map(
-                      (v) => `
-                        <div class="flex gap-2">
-                          <div class="shrink-0 w-7 text-right text-xs text-gray-400 pt-[2px]">${escapeHTML(
-                            v.p
-                          )}</div>
-                          <div class="text-gray-900 dark:text-gray-100">${escapeHTML(
-                            v.s
-                          )}</div>
-                        </div>
-                      `
-                    )
-                    .join("")
-                : `<div class="text-sm text-gray-500">본문 데이터가 없어요.</div>`
-            }
-          </div>
-        </div>
-      `;
-      $body.html(html);
-    } catch (e) {
-      // 본문 동기화 실패는 치명적이 아니므로 조용히
-      console.warn("renderBibleModalForChapter failed", e);
-    }
-  };
-
-  // =========================================================
   // 2.5) GOODTV "선택한 Day 분량 이어듣기" (Day Queue)
   // =========================================================
   const goodtvDayRuntime = {
@@ -360,7 +328,6 @@
     queue: [],
     idx: 0,
     session: 0,
-    playAt: null,
   };
 
   const stopGoodtvDayQueue = () => {
@@ -370,6 +337,7 @@
     qs("#goodtv-day-status").text("정지됨");
   };
 
+  
   const markSelectedDayDone = (state) => {
     try {
       const p2 = loadProgress();
@@ -382,8 +350,7 @@
       if (!p2.cycles[String(cycle)].completed[String(day)]) {
         p2.cycles[String(cycle)].completed[String(day)] = true;
 
-        if (p2.cycles[String(cycle)].startedAt === null)
-          p2.cycles[String(cycle)].startedAt = nowIso();
+        if (p2.cycles[String(cycle)].startedAt === null) p2.cycles[String(cycle)].startedAt = nowIso();
 
         const doneCount = countDone(p2.cycles[String(cycle)].completed);
         if (doneCount >= state.days) p2.cycles[String(cycle)].finishedAt = nowIso();
@@ -394,7 +361,7 @@
     }
   };
 
-  const buildGoodtvDayQueue = async (state) => {
+const buildGoodtvDayQueue = async (state) => {
     const entry = state?.PLAN?.[state.selectedDay - 1];
     const readings = Array.isArray(entry?.readings) ? entry.readings : [];
     if (!readings.length) return [];
@@ -430,7 +397,7 @@
 
     const preview = queue.map((x) => `${x.short}${x.chapter}`).join(" · ");
     qs("#goodtv-day-status").text(preview || "(선택 분량 없음)");
-    qs("#goodtv-day-label").removeClass("hidden");
+    qs("#goodtv-day-queue").text(preview || "").toggleClass("hidden", !preview);
 
     if (!queue.length) {
       alert("선택한 Day 분량(읽기표)을 찾지 못했어요.");
@@ -439,8 +406,6 @@
 
     // 패널 열기 (사용자 클릭 흐름)
     qs("#goodtv-audio-panel").removeClass("hidden");
-    // ✅ 전체듣기로 열렸다면 토글 상태도 open:true로 동기화
-    setAUDIO({ ...getAUDIO(), open: true }); // ✅ (추가)
 
     goodtvDayRuntime.playing = true;
 
@@ -456,33 +421,16 @@
         qs("#goodtv-day-status").text("선택 분량 재생 완료 ✓");
         // ✅ 전체 이어듣기(선택 분량) 완료 시, 완료 체크 처리
         markSelectedDayDone(state);
-        try {
-          render(state);
-        } catch (_) {}
+        try { render(state); } catch (_) {}
         return;
       }
 
-      // ✅ 구절 변경: 패널은 유지, 재생/표시만 초기화 후 진행
-      // (너무 강한 초기화를 원치 않으면 아래 2줄 중 stopGoodtvAudio만 남겨도 됨)
-      stopGoodtvAudio(); // ✅ 재생 UI 리셋(간단)
-      // resetGoodtvStateKeepPanel(); // (선택) 완전 초기화가 필요하면 사용
-
       // 모달/패널 표시용
       currentBibleCtx = { bookNum: item.bookNum, chapter: item.chapter }; // ✅ 현재 위치 동기화
-      setGoodtvPanelText(
-        "GOOD TV 원음",
-        await formatGoodtvRef({ bookNum: item.bookNum, chapter: item.chapter })
-      ); // ✅ 표시를 한글 책명으로
+      setGoodtvPanelText("GOOD TV 원음", await formatGoodtvRef({ bookNum: item.bookNum, chapter: item.chapter })); // ✅ 표시를 한글 책명으로
       qs("#goodtv-day-status").text(
         `재생 중… (${i + 1}/${goodtvDayRuntime.queue.length}) · ${item.short}${item.chapter}`
       );
-
-      // ✅ 전체듣기 중 본문도 동기화
-      await renderBibleModalForChapter({
-        bookNum: item.bookNum,
-        chapter: item.chapter,
-        titleText: item.token || `${item.short}${item.chapter}`,
-      }); // ✅ (추가)
 
       const url = buildGoodTvBibleAudioUrl(item.bookNum, item.chapter);
       goodtvAudio.lastUrl = url; // ✅ 큐 재생 중에도 마지막 URL 갱신 (패널 토글 재로딩 방지)
@@ -524,28 +472,28 @@
       }
     };
 
-    // playAt은 호출마다 새 클로저가 생기므로, ended 핸들러가 최신 playAt을 쓰도록 런타임에 저장한다.
-    goodtvDayRuntime.playAt = playAt; // ✅ 다음 트랙 진행에서 최신 playAt 사용
+      // playAt은 호출마다 새 클로저가 생기므로, ended 핸들러가 최신 playAt을 쓰도록 런타임에 저장한다.
+  goodtvDayRuntime.playAt = playAt; // ✅ 다음 트랙 진행에서 최신 playAt 사용
 
-    // ended 핸들러(1회만 바인딩) - 내부에서 goodtvDayRuntime.playAt을 참조(클로저 고착 방지)
-    if (!a.__goodtvDayQueueBound) {
-      a.__goodtvDayQueueBound = true;
-      a.addEventListener("ended", () => {
-        if (!goodtvDayRuntime.playing) return;
-        goodtvDayRuntime.idx += 1;
-        // 다음 트랙 세팅/재생은 다음 틱에서 처리(브라우저별 ended 타이밍 이슈 방지)
-        setTimeout(() => {
-          try {
-            if (typeof goodtvDayRuntime.playAt === "function") {
-              goodtvDayRuntime.playAt(goodtvDayRuntime.idx);
-            }
-          } catch (_) {}
-        }, 0);
-      });
-    }
+  // ended 핸들러(1회만 바인딩) - 내부에서 goodtvDayRuntime.playAt을 참조(클로저 고착 방지)
+  if (!a.__goodtvDayQueueBound) {
+    a.__goodtvDayQueueBound = true;
+    a.addEventListener("ended", () => {
+      if (!goodtvDayRuntime.playing) return;
+      goodtvDayRuntime.idx += 1;
+      // 다음 트랙 세팅/재생은 다음 틱에서 처리(브라우저별 ended 타이밍 이슈 방지)
+      setTimeout(() => {
+        try {
+          if (typeof goodtvDayRuntime.playAt === "function") {
+            goodtvDayRuntime.playAt(goodtvDayRuntime.idx);
+          }
+        } catch (_) {}
+      }, 0);
+    });
+  }
 
-    await playAt(0);
-  };
+  await playAt(0);
+};
 
   const bindGoodtvDayQueueButtons = (state) => {
     qs("#goodtv-play-day")
@@ -729,17 +677,19 @@
 
   const closeBibleModal = () => {
     // ✅ 모달 닫으면 GOODTV도 정리
-    resetGoodtvStateKeepPanel(); // ✅ (패널 유지)
+    stopGoodtvDayQueue();
+    stopGoodtvAudio();
+    qs("#goodtv-audio-panel").addClass("hidden");
+
     qs("#bible-modal").addClass("hidden");
     window.SiteOverlay?.close("bible-modal");
   };
 
   const openBibleModal = async (token) => {
-    // ✅ 새 토큰(구절) 열 때: 패널은 유지하되 상태 초기화
-    resetGoodtvStateKeepPanel(); // ✅
-
-    const cfg = getAUDIO();
-    qs("#goodtv-audio-panel").toggleClass("hidden", !cfg.open);
+    // ✅ 새 토큰 열 때도 오디오 정리(원치 않으면 제거 가능)
+    stopGoodtvDayQueue();
+    stopGoodtvAudio();
+    qs("#goodtv-audio-panel").addClass("hidden");
 
     const parsed = parseReadingToken(token);
 
@@ -1279,7 +1229,7 @@
         setSelectedDay: (d) => {
           state.selectedDay = clamp(d, DAY_MIN, days);
           setQueryDay(state.selectedDay);
-          resetGoodtvForDayChange(); // ✅ Day 변경 시 "패널 유지 + 상태 초기화"
+          resetGoodtvForDayChange(); // ✅ Day 변경 시 성경듣기(모바일 컨트롤) 초기화
           render(state);
         },
       };
