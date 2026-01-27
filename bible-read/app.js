@@ -223,8 +223,10 @@
     if (willOpen) {
       $panel.removeClass("hidden");
       await loadGoodtvFromCtx({ autoplay: false, preserve: true }); // 열 때는 준비만 (재생 유지)
+      qs("#open-label").text("▲");
     } else {
       $panel.addClass("hidden");
+      qs("#open-label").text("▼");
       // NOTE: 패널 토글은 UI만 처리 (재생/큐 재생에는 영향 없음)
     }
   };
@@ -439,6 +441,7 @@
 
     // 패널 열기 (사용자 클릭 흐름)
     qs("#goodtv-audio-panel").removeClass("hidden");
+    qs("#open-label").text("▲");
     // ✅ 전체듣기로 열렸다면 토글 상태도 open:true로 동기화
     setAUDIO({ ...getAUDIO(), open: true }); // ✅ (추가)
 
@@ -740,6 +743,7 @@
 
     const cfg = getAUDIO();
     qs("#goodtv-audio-panel").toggleClass("hidden", !cfg.open);
+    qs("#open-label").text(cfg.open ? "▲" : "▼");
 
     const parsed = parseReadingToken(token);
 

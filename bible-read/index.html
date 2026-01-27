@@ -215,12 +215,14 @@
         <div class="grid grid-cols-1 gap-2">
           <!-- GOOD TV Toggle -->
           <button id="open-bible-audio"
-            class="w-full flex items-center justify-center gap-2 rounded-xl
+            class="w-full flex items-center justify-between gap-2 rounded-xl
                   border border-gray-200 dark:border-gray-700
                   bg-white/60 dark:bg-gray-900/40
                   px-4 py-3 font-semibold active:scale-[0.99]">
-            🎧 성경듣기 (GOOD TV 원음)
+            <span class="font-semibold text-gray-900 dark:text-gray-100">🎧 성경듣기</span>            
+            <span id="open-label" class="text-sm text-gray-500 dark:text-gray-300">▼</span>
           </button>
+          
 
           <!-- ✅ GOOD TV 원음 컨트롤 패널 -->
           <div id="goodtv-audio-panel"
@@ -230,7 +232,7 @@
               <div class="min-w-0">
                 <div id="goodtv-audio-title"
                     class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                  GOOD TV 원음
+                  GOOD TV 음원
                 </div>
                 <div id="goodtv-audio-sub"
                     class="text-xs text-gray-500 dark:text-gray-300 truncate">
