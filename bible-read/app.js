@@ -1070,10 +1070,10 @@
           return;
         }
 
-        // 옵션: 오늘 완료 후 다음 자동 진행
+        // 옵션: 완료 후 다음 미완료로 자동 진행
         const opt = loadOptions();
-        if (opt.autoNextAfterDoneToday && selectedDay === state.todayDay && nowDone) {
-          state.setSelectedDay(findNextUndoneDay(p2, cycle, state.todayDay, days));
+        if (opt.autoNextAfterDoneToday && nowDone) {
+          state.setSelectedDay(findNextUndoneDay(p2, cycle, selectedDay, days)); // ✅ 변경: selectedDay 기준
           return;
         }
 
@@ -1264,12 +1264,14 @@
         const cycle = Number(p2.activeCycle || 1);
         ensureCycle(p2, cycle);
 
-        initialDay = pickAutoDay(p2, cycle, todayDay, days);
+        const opt = loadOptions();
 
-        // 옵션: 오늘 완료 후 다음 자동 진행이 켜져있다면 today가 완료일 때 next
         if (opt.autoNextAfterDoneToday) {
-          const doneToday = !!p2.cycles[String(cycle)]?.completed?.[String(todayDay)];
-          if (doneToday) initialDay = findNextUndoneDay(p2, cycle, todayDay, days);
+          // ✅ ON: 오늘이 미완료면 오늘, 완료면 다음 미완료
+          initialDay = pickAutoDay(p2, cycle, todayDay, days);
+        } else {
+          // ✅ OFF: 무조건 오늘 날짜 구간에 포커싱
+          initialDay = todayDay;
         }
       }
 
